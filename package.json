@@ -9,9 +9,22 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
+    "@ant-design/x": "^2.1.1",
+    "@ant-design/x-markdown": "^2.1.1",
+    "@svgr/webpack": "^8.1.0",
+    "@tanstack/react-router": "^1.143.6",
+    "ahooks": "^3.9.6",
+    "antd": "^6.1.2",
+    "axios": "^1.13.2",
+    "clsx": "^2.1.1",
+    "dayjs": "^1.11.19",
+    "fabric": "^6.7.1",
     "next": "16.1.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "tailwind-merge": "^3.4.0",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -21,7 +34,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "@tanstack/router-plugin": "^1.143.6"
   },
   "ignoreScripts": [
     "sharp",

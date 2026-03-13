@@ -1,26 +1,89 @@
+@layer theme, base, antd, components, utilities;
+
 @import "tailwindcss";
+/* @import "@/styles/scrollbar.css"; */
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-primary-color: #990dfb; /* 主色调 */
+  --color-secondary-color: #d38bff; /* 次色调 */
+  --color-default-bg-color: #fafbfc; /* 默认背景颜色 */
+  --color-sider-bg-color: #ffffff; /* 侧边栏背景颜色 */
+  --color-card-bg-color: #ffffff; /* 卡片背景颜色 */
+  --color-page-bg-color: #f9fafc; /* 页面背景颜色 */
+  --color-block-title-color: #090c0e; /* 块标题颜色 */
+  --color-text-color: #090c0e; /* 默认文本颜色 */
+  --scrollbar-color: rgba(0, 0, 0, 0.5); /* 滚动条颜色 */
+  --color-assistant-text-color: #aab3b8; /* 辅助文本颜色 */
+  --color-button-text-color: #606e76; /* 按钮文本颜色 */
+  --color-button-text-color-disabled: #d0d4d6; /* 按钮文本颜色禁用 */
+  --color-line-color: rgba(0, 0, 0, 0.05); /* 线条颜色 */
+
+  --inset-shadow-card: 0 2px 6px 0 rgba(0, 0, 0, 0.04); /* 卡片阴影 */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+[data-theme="dark"] {
+  --color-primary-color: #c163fb;
+  --color-default-bg-color: #181818;
+  --color-sider-bg-color: #181818;
+  --color-card-bg-color: #181818;
+  --color-page-bg-color: #181818;
+  --color-block-title-color: #ffffff;
+  --color-text-color: #ffffff;
+  --scrollbar-color: rgba(255, 255, 255, 0.65);
+  --color-assistant-text-color: #889096;
+  --color-button-text-color: #cdd2d6;
+  --color-button-text-color-disabled: #404040;
+  --color-line-color: rgba(255, 255, 255, 0.05);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.theme-only-light {
+  display: inline-flex;
 }
 
+.theme-only-dark {
+  display: none;
+}
+
+[data-theme="dark"] .theme-only-light {
+  display: none;
+}
+
+[data-theme="dark"] .theme-only-dark {
+  display: inline-flex;
+}
+
+/* Form.Item 校验信息样式 */
+.ant-form-item-explain-error {
+  font-size: 12px;
+}
+
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--color-text-color);
+  background-color: var(--color-default-bg-color);
+  font-family:
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Ubuntu,
+    Cantarell,
+    Noto Sans,
+    sans-serif,
+    Apple Color Emoji,
+    Segoe UI Emoji,
+    Segoe UI Symbol,
+    Noto Color Emoji,
+    BlinkMacSystemFont,
+    Helvetica Neue,
+    Arial,
+    PingFang SC,
+    PingFang TC,
+    PingFang HK,
+    Microsoft Yahei,
+    Microsoft JhengHei;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
