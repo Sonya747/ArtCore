@@ -1,0 +1,21 @@
+/* 首次渲染闪烁动画：从黑色过渡到黄色，然后闪烁三次 */
+@keyframes flash-yellow {
+  0% {
+    background-color: rgb(64 64 64 / 0.7); /* bg-neutral-700/70 */
+  }
+  20% {
+    background-color: rgb(64 64 64 / 0.7); /* 第一次闪烁 */
+  }
+  40% {
+    background-color: rgb(234 179 8 / 0.7);
+  }
+  100% {
+    background-color: rgb(64 64 64 / 0.7); /* 回到黑色 */
+  }
+}
+
+.image-uploader-flash {
+  animation: flash-yellow 1s linear;
+  animation-iteration-count: 3;
+  animation-fill-mode: forwards;
+}

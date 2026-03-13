@@ -1,0 +1,21 @@
+<svg width="800" height="800" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1520" />
+      <stop offset="100%" stop-color="#1a1028" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#44e3ff" />
+      <stop offset="100%" stop-color="#6b7cff" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="800" fill="url(#bg)" />
+  <rect x="110" y="230" width="540" height="170" rx="26" fill="#29313c" stroke="#5f6d7a" stroke-width="6" />
+  <rect x="520" y="260" width="130" height="120" rx="18" fill="#212833" stroke="#44e3ff" stroke-width="6" />
+  <circle cx="575" cy="320" r="38" fill="url(#accent)" />
+  <rect x="170" y="420" width="310" height="70" rx="18" fill="#1c222a" stroke="#415061" stroke-width="4" />
+  <rect x="210" y="446" width="230" height="22" rx="11" fill="url(#accent)" />
+  <rect x="120" y="300" width="90" height="90" rx="20" fill="#1c222a" stroke="#5f768a" stroke-width="6" />
+  <circle cx="165" cy="345" r="24" fill="url(#accent)" />
+  <text x="120" y="640" fill="#9fb6c9" font-size="20" font-family="Arial">Arc Blaster v3</text>
+</svg>
