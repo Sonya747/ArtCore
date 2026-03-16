@@ -8,7 +8,7 @@ import { ImageEditModal } from '../image-edit-modal'
 import { useImageEditModal } from '../image-edit-modal/hooks/use-image-edit-modal'
 import MagicHint from './magic-hint'
 import UploadButton from './upload-button'
-import { IMAGES } from '@/app/service/images/typing'
+import { IMAGES } from '@/service/images/typing'
 import { checkImagePixels } from '@/utils/image-encode'
 
 export interface ImageUploaderWithFrameProps {

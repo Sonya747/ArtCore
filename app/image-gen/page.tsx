@@ -54,12 +54,6 @@ const getLastUsedModel = (): string => {
   return MODEL_OPTIONS[0].value
 }
 
-/**
- * 保存上次使用的模型
- */
-const saveLastUsedModel = (model: string) => {
-  ls.set(LAST_MODEL_KEY, model)
-}
 
 
 export default function Page() {
@@ -70,11 +64,6 @@ export default function Page() {
 
   const referenceImages = (Form.useWatch("referenceImages", form) as unknown[]) || []
   const model = Form.useWatch("model", form) || getLastUsedModel()
-
-  const canRun = useMemo(
-    () => form.getFieldValue("prompt")?.trim() && !isLoading,
-    [form, isLoading]
-  )
 
   const handleGenerate = () => {
     setIsLoading(true)
@@ -99,6 +88,15 @@ export default function Page() {
         setResult(data)
       })
       .catch((e) => {
+        // 表单校验错误时，仅提示具体校验信息，不再视为系统错误
+        if (e?.errorFields && Array.isArray(e.errorFields) && e.errorFields.length > 0) {
+          const firstFieldError = e.errorFields[0]
+          const firstErrorMsg =
+            (firstFieldError?.errors && firstFieldError.errors[0]) || "请完善必填项信息"
+          message.info(firstErrorMsg)
+          return
+        }
+
         console.error(e)
         message.error("生成图片任务失败")
       })
@@ -114,7 +112,7 @@ export default function Page() {
   })
 
   const handleModelChange = (value: string) => {
-    saveLastUsedModel(value)
+    ls.set(LAST_MODEL_KEY, model)
   }
 
   const handleRegenerate = () => {
@@ -221,7 +219,6 @@ export default function Page() {
               icon={<IconFont type="icon-ai" />}
               block
               loading={isLoading}
-              disabled={!canRun}
             >
               立即生成
             </GradientButton>

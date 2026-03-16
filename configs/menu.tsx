@@ -44,7 +44,7 @@ export const MENU_CONFIGS: MenuGroupConfig[] = [
     label: '工作空间',
     children: [
       {
-        key: 'asset-management',
+        key: 'asset-manage',
         icon: <IconFont type='icon-data' />,
         label: '空间资产',
         showSidebar: true,

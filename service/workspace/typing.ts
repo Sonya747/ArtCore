@@ -142,6 +142,7 @@ export namespace Workspace {
   }
 
   export interface TaskDetail {
+    title:string
     request_id: string
     status: TaskStatus
     task_type: TaskType
