@@ -1,5 +1,6 @@
 import Providers from "./providers"
 import Sidebar from "@/components/sidebar"
+import { initDatabaseConnection } from '@/service/db/init'
 import './globals.css'
 const themeScript = `
 (function() {
@@ -11,11 +12,13 @@ const themeScript = `
   } catch (e) {}
 })();
 `
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  await initDatabaseConnection()
+
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head>

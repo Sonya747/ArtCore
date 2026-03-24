@@ -6,12 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
     "@ant-design/x": "^2.1.1",
     "@ant-design/x-markdown": "^2.1.1",
+    "@prisma/client": "6",
     "@svgr/webpack": "^8.1.0",
     "@tanstack/react-router": "^1.143.6",
     "ahooks": "^3.9.6",
@@ -28,14 +31,15 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@tanstack/router-plugin": "^1.143.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "prisma": "6",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "@tanstack/router-plugin": "^1.143.6"
+    "typescript": "^5"
   },
   "ignoreScripts": [
     "sharp",
