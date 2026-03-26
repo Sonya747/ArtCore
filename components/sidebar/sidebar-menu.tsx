@@ -1,7 +1,7 @@
 "use client"
 import { Divider } from 'antd'
 import { useMemo } from 'react'
-import { MENU_CONFIGS } from '../../configs/menu'
+import { MENU_CONFIGS, MenuGroupConfig } from '../../configs/menu'
 import SideItem from './sidebar-item'
 import { cn } from '@/utils/cn'
 import { usePathname } from 'next/navigation'
@@ -21,9 +21,12 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ siderCollapsed }) => {
   }, [pathname])
 
   return (
-    <div className='flex-1 px-1 overflow-y-auto overflow-x-hidden flex flex-col gap-4'>
-      {MENU_CONFIGS.map((group, index) => (
-        <div key={group.label} className='mb-4'>
+    <div className='w-full flex flex-col items-center gap-4'>
+      {MENU_CONFIGS.map((group: MenuGroupConfig, index: number) => (
+        <div
+          key={group.label}
+          className={cn('mb-4 w-full mx-auto', siderCollapsed ? 'max-w-14' : 'max-w-56')}
+        >
           <div
             className={'px-2 mb-2 h-5 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap'}
           >

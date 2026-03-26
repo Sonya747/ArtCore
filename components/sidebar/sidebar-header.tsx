@@ -11,18 +11,9 @@ export default function SidebarHeader({
   siderCollapsed: boolean
 }) {
   return (
-    <div className="h-[38px] px-1 flex items-center justify-center">
-      {siderCollapsed ? (
-        <>
-          <MiniLogo className="flex-shrink-0 theme-only-light h-5 w-5" />
-          <MiniLogoDark className="flex-shrink-0 theme-only-dark h-5 w-5" />
-        </>
-      ) : (
-        <>
-          <Logo className="ml-3 theme-only-light h-6" />
-          <LogoDark className="ml-3 theme-only-dark h-6" />
-        </>
-      )}
+    <div className="h-[80px] px-1 flex items-center justify-center mb-4">
+      <Logo className="ml-3 theme-only-light h-10" />
+      <LogoDark className="ml-3 theme-only-dark h-10" />
     </div>
   )
 }

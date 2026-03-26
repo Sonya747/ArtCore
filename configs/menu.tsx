@@ -37,6 +37,13 @@ export const MENU_CONFIGS: MenuGroupConfig[] = [
         showSidebar: true,
         showTaskBar: true,
       },
+      {
+        key:'task-manage',
+        icon: <IconFont type='icon-list' />,
+        label: '任务管理',
+        showSidebar: true,
+        showTaskBar: true,
+      }
     ],
   },
   {
@@ -51,9 +58,9 @@ export const MENU_CONFIGS: MenuGroupConfig[] = [
         showTaskBar: false,
       },
       {
-        key: 'space-management',
+        key: 'member-manage',
         icon: <IconFont type='icon-settings' />,
-        label: '空间管理',
+        label: '成员管理',
         showSidebar: true,
         showTaskBar: false,
       },

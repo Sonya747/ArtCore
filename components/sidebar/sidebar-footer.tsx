@@ -20,7 +20,7 @@ import { login, logout } from '@/utils/login'
 
 // 外部链接配置
 const EXTERNAL_LINKS = {
-  HELP_DOC: 'https://lilithgames.feishu.cn/docx/HVuJdNOhzodDHYxHBXzc4Iddnhg',
+  HELP_DOC: 'https://gmailgames.feishu.cn/docx/HVuJdNOhzodDHYxHBXzc4Iddnhg',
   FEEDBACK_GROUP:
     'https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=308r06a4-9525-4dae-8f36-243ca0539c7a',
 } as const
@@ -87,7 +87,7 @@ const SidebarFooter: React.FC<SidebarFooterProps> = ({ siderCollapsed }) => {
       ),
       icon: <FileTextOutlined />,
       onClick: () => {
-        window.open('https://test-liclick-v2.lilithgames.com/docs#/', '_blank')
+        window.open('https://test-liclick-v2.gmailgames.com/docs#/', '_blank')
       },
       style: process.env.NODE_ENV === 'development' ? {} : { display: 'none' },
     },

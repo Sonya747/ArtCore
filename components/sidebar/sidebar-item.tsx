@@ -37,28 +37,19 @@ const SideItem: React.FC<SideItemProps> = ({
       href={`/${itemKey}` as '/'}
       // onClick={handleClick}
       className={cn(
-        'h-10 flex items-center py-2 rounded-md cursor-pointer',
-        collapsed ? 'justify-center px-0' : 'px-3',
+        'min-h-14 flex flex-col items-center justify-center gap-1 py-2 rounded-md cursor-pointer select-none',
+        collapsed ? 'w-10 px-0' : 'w-full px-2',
         selected
           ? 'bg-linear-to-r from-[#F3E8FF] to-[#FDE7F4] text-primary-color dark:from-[#BB7CFF] dark:to-[#FF6DCA] dark:text-black!'
           : 'text-neutral-700! dark:text-neutral-300! hover:bg-neutral-50! dark:hover:bg-neutral-800! hover:text-neutral-900! dark:hover:text-white!'
       )}
     >
-      <span className={cn('text-base flex items-center justify-center w-5', collapsed ? '' : 'mr-3')}>
+      <span className={cn('text-xl leading-none flex items-center justify-center w-7')}>
         {icon}
       </span>
-      {!collapsed && <span className='text-sm font-normal whitespace-nowrap'>{label}</span>}
+      {!collapsed && <span className='text-xs font-normal whitespace-nowrap leading-none'>{label}</span>}
     </Link>
   )
-
-  // 收起状态时用 Tooltip 包裹
-  if (collapsed) {
-    return (
-      <Tooltip title={label} placement='right'>
-        {itemContent}
-      </Tooltip>
-    )
-  }
 
   return itemContent
 }
