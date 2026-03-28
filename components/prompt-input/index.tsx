@@ -21,7 +21,7 @@ const PromptInput = ({ value, onChange, placeholder, disabled, title ,autoExpand
       <div className='flex justify-between items-center mb-2'>
         <div>
           <span className='text-sm font-medium text-block-title-color'>{title ?? '不希望呈现的内容'}</span>
-          <span className='text-sm font-medium text-[#AAB3B8] dark:text-gray-500'>（可选）</span>
+          {/* <span className='text-sm font-medium text-[#AAB3B8] dark:text-gray-500'>（可选）</span> */}
         </div>
         <Button
           type='link'
