@@ -5,10 +5,17 @@ alwaysApply: true
 ---
 
 # 项目背景
-本项目是一个comfyui图像生成与创作任务管理系统
+本项目是一个aigc图像生成与任务管理系统
 
 - 代码简洁、准确、易读
 - 使用 TypeScript 构建，提供完整的类型定义文件
+- 使用next.js,app-router
+
+# 文件目录规范
+- /app下存放路由页面，由next解析为路由
+- /service下放请求接口
+- /utils下放通用方法
+- components下放通用组件
 
 # 编码规范
 - 使用es6标准及之后的语法作为js编码规范
