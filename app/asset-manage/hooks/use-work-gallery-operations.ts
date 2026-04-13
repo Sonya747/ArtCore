@@ -9,7 +9,6 @@ import {
   removeAssets,
   selectedItemsToAssetIds,
 } from '../utils/assets-operations'
-import { useGlobalStore } from '@/store/global'
 
 export interface UseWorkGalleryOperationsReturn {
   selecting: boolean
@@ -179,7 +178,7 @@ export const useWorkGalleryOperations = (): UseWorkGalleryOperationsReturn => {
         message.warning('所选项目中没有可移除的资产')
         return
       }
-      await removeAssets(assetIds, albumId, useGlobalStore.getState().currentWorkspace?.workspace_id ?? '')
+      await removeAssets(assetIds, albumId)
       handleCancelSelect()
     },
     [selectedItems, handleCancelSelect]
@@ -194,7 +193,7 @@ export const useWorkGalleryOperations = (): UseWorkGalleryOperationsReturn => {
         message.warning(`项目 "${item.title}" 没有可移除的资产`)
         return
       }
-      await removeAssets(assetIds, albumId, useGlobalStore.getState().currentWorkspace?.workspace_id ?? '')
+      await removeAssets(assetIds, albumId)
     },
     []
   )

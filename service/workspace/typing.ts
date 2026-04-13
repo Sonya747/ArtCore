@@ -83,6 +83,11 @@ export namespace Workspace {
       asset_id: string
       url: string
       thumbnail_url?: string
+      /** 资产类目：character | weapon | scene | style 等，由后端/存储返回 */
+      type?: string
+      description?: string
+      created_by?: string
+      created_at?: string
     }[]
     reference_images: string[]
   }

@@ -1,17 +1,15 @@
-import { App, type MenuProps, Spin } from 'antd'
+import { App, Descriptions, type MenuProps, Modal, Spin } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useShallow } from 'zustand/react/shallow'
 import EmptyAssets from '@/assets/images/empty-asset.svg'
 import { PRIMARY_GRADIENT_BUTTON_CLASSNAME } from '@/components/gradient-button'
 import { useScrollPagination } from '@/hooks/use-scroll-page'
 import { API } from '@/service'
 import { TaskStatus, TaskType } from '@/service/typing'
 import { useAlbumStore } from '@/store/album'
-import { useGlobalStore } from '@/store/global'
 import { useWorkGalleryOperations } from '../../hooks/use-work-gallery-operations'
-import { handleTaskNavigate, responseToAsset, responseToTasks } from '../../utils/assets-operations'
+import { assetRecordToWorkDisplay } from '../../utils/assets-operations'
 import { AddToAlbumModal } from '../album-area/album-modal'
-import WorkDisplay, { type WorkDisplayData } from './work-display'
+import WorkDisplay, { formatAssetCatalogTypeLabel, type WorkDisplayData } from './work-display'
 import WorkGalleryHeader from './work-gallery-header'
 import WorkGalleryTabs from './work-gallery-tabs'
 
@@ -21,8 +19,6 @@ interface WorkGalleryProps {
 }
 
 const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
-  const currentWorkspace = useGlobalStore(useShallow((state) => state.currentWorkspace))
-  const workspaceId = currentWorkspace?.workspace_id
   const [taskType, setTaskType] = useState<TaskType | 'all'>('all')
   const [keyword, setKeyword] = useState<string | undefined>(undefined)
   const [groupByTask, setGroupByTask] = useState<boolean>(false)
@@ -30,6 +26,7 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
   const [operatingItem, setOperatingItem] = useState<WorkDisplayData | undefined>(undefined) //当前操作的单个item
   const [existAlbumIds, setExistAlbumIds] = useState<string[]>([]) // 资产已存在的专辑ID列表
   const [deletedKeys, setDeletedKeys] = useState<Set<string>>(new Set()) // 不显示的项目 key，用于删除/移除操作后不显示项目（但不重新请求数据）
+  const [assetDetailItem, setAssetDetailItem] = useState<WorkDisplayData | null>(null)
   const { modal, message } = App.useApp()
 
   // 操作相关逻辑
@@ -52,75 +49,37 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
     handleSingleRemoveFromAlbum,
   } = useWorkGalleryOperations()
 
-  const fetchTasks = useCallback(
+  const fetchAssets = useCallback(
     async (page: number, pageSize: number, signal?: AbortSignal) => {
-      if (!workspaceId) return Promise.resolve({ list: [], total: 0, hasMore: false })
-
-      // 如果有 albumId，调用 getAlbumDetail
-      if (albumId) {
-        return await API.assets
-          .getAlbumDetail(
-            {
-              workspace_id: workspaceId,
-              album_id: albumId,
-              page,
-              page_size: pageSize,
-              keyword: keyword || null,
-              task_types:
-                taskType === 'all'
-                  ? undefined
-                  : taskType === TaskType.IMAGE
-                    ? [TaskType.IMAGE, TaskType.CHAT]
-                    : [taskType],
-            },
-          )
-          .then((res) => {
-            return { list: res.results || [], total: res.total_count || 0, hasMore: res?.has_more }
-          })
-          .catch((err) => {
-            // 忽略取消请求的错误
-            if (err.name === 'CanceledError' || err.name === 'AbortError') {
-              return { list: [], total: 0, hasMore: false }
-            }
-            message.error(err.message || '获取专辑详情失败')
-            console.error('getAlbumDetail', err)
-            return { list: [], total: 0, hasMore: false }
-          })
-      }
-
-      // 否则调用 getTaskDetailList
       return await API.assets
-        .getTaskDetailList(
-          {
-            workspace_id: workspaceId,
-            page,
-            page_size: pageSize,
-            task_types:
-              taskType === 'all'
-                ? undefined
-                : taskType === TaskType.IMAGE
-                  ? [TaskType.IMAGE, TaskType.CHAT]
-                  : [taskType],
-            keyword,
-          }        )
-        .then((res) => {
-          return {
-            list: res.results || [],
-            total: res.total_count || 0,
-            hasMore: res.has_more,
-          }
+        .fetchAssets({
+          album_id: albumId ?? null,
+          page,
+          page_size: pageSize,
+          keyword: keyword || null,
+          task_types:
+            taskType === 'all'
+              ? undefined
+              : taskType === TaskType.IMAGE
+                ? [TaskType.IMAGE, TaskType.CHAT]
+                : [taskType],
+          signal,
         })
-        .catch((err) => {
-          // 忽略取消请求的错误
+        .then((res) => ({
+          list: res.results || [],
+          total: res.total_count || 0,
+          hasMore: res.has_more,
+        }))
+        .catch((err: Error) => {
           if (err.name === 'CanceledError' || err.name === 'AbortError') {
             return { list: [], total: 0, hasMore: false }
           }
-          message.error(err.message || '获取任务列表失败')
-          console.error('getTaskDetailList', err)
+          message.error(err.message || '获取资产列表失败')
+          console.error('fetchAssets', err)
           return { list: [], total: 0, hasMore: false }
         })
     },
-    [workspaceId, albumId, taskType, keyword]
+    [albumId, taskType, keyword, message]
   )
 
   const handleOpenDeleteConfirmModal = (item?: WorkDisplayData) => {
@@ -209,12 +168,12 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
 
   //TODO 这里的逻辑要捋一下
   const paginationDeps = useMemo(
-    () => [workspaceId, albumId, taskType, keyword],
-    [workspaceId, albumId, taskType, keyword]
+    () => [albumId, taskType, keyword],
+    [albumId, taskType, keyword]
   )
 
   const { data, loading } = useScrollPagination({
-    fetchPage: fetchTasks,
+    fetchPage: fetchAssets,
     pageSize: 20,
     threshold: 400,
     enabled: true,
@@ -228,23 +187,12 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
   }, [paginationDeps])
 
   const assets = useMemo(() => {
-    return data?.flatMap(responseToAsset) || []
-  }, [data])
-
-  const tasks = useMemo(() => {
-    return data?.map(responseToTasks) || []
+    return data?.map(assetRecordToWorkDisplay) || []
   }, [data])
 
   const displayItems = useMemo(() => {
-    // return (groupByTask ? tasks : assets).filter(
-    //   (item) =>
-    //     // 过滤掉已删除的项目
-    //     !deletedKeys.has(item.key ?? '') &&
-    //     // 过滤掉已完成的任务且没有asset_ids的任务
-    //     !(item.status === TaskStatus.FINISHED && (item.assetIds ?? []).length === 0)
-    // )
-    return assets
-  }, [groupByTask, tasks, assets, deletedKeys])
+    return assets.filter((item) => !deletedKeys.has(item.key ?? ''))
+  }, [assets, deletedKeys])
 
   // 处理任务类型切换
   const handleTabChange = (newTaskType: TaskType | 'all') => {
@@ -294,7 +242,6 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
             if (asset.assetIds?.[0]) {
               try {
                 const albumIds = await API.assets.getAssetAlbumIds({
-                  workspace_id: workspaceId ?? '',
                   asset_id: asset.assetIds[0],
                 })
                 setExistAlbumIds(albumIds)
@@ -362,7 +309,6 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
                   selectedItems[0].taskType === TaskType.AUDIO)
               ) {
                 const albumIds = await API.assets.getAssetAlbumIds({
-                  workspace_id: workspaceId ?? '',
                   asset_id: selectedItems[0].assetIds?.[0] ?? '',
                 })
                 setExistAlbumIds(albumIds)
@@ -400,7 +346,7 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
                 selected={isSelected(item)}
                 selectable={selecting}
                 onSelect={handleSelect}
-                onClick={() => handleTaskNavigate(item.detail)}
+                onClick={() => setAssetDetailItem(item)}
                 actionItems={getActionItems(item)}
               />
             ))}
@@ -417,7 +363,6 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
       </div>
       <AddToAlbumModal
         open={openAddToAlbumModal}
-        workspaceId={workspaceId ?? ''}
         existAlbumIds={existAlbumIds}
         onCancel={() => {
           setOpenAddToAlbumModal(false)
@@ -428,6 +373,44 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
           setExistAlbumIds([])
         }}
       />
+      <Modal
+        title='资产详情'
+        open={!!assetDetailItem}
+        footer={null}
+        onCancel={() => setAssetDetailItem(null)}
+        destroyOnHidden
+        width={480}
+      >
+        {assetDetailItem ? (
+          <Descriptions column={1} size='small' labelStyle={{ width: 96 }}>
+            <Descriptions.Item label='类型'>
+              {formatAssetCatalogTypeLabel(
+                assetDetailItem.assetCatalogType,
+                assetDetailItem.taskType
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label='描述'>
+              {assetDetailItem.assetDescription?.trim()
+                ? assetDetailItem.assetDescription
+                : '—'}
+            </Descriptions.Item>
+            <Descriptions.Item label='创建者'>
+              {assetDetailItem.assetCreatedBy?.trim() ? assetDetailItem.assetCreatedBy : '—'}
+            </Descriptions.Item>
+            <Descriptions.Item label='创建时间'>
+              {assetDetailItem.assetCreatedAt
+                ? (() => {
+                    try {
+                      return new Date(assetDetailItem.assetCreatedAt!).toLocaleString('zh-CN')
+                    } catch {
+                      return assetDetailItem.assetCreatedAt
+                    }
+                  })()
+                : '—'}
+            </Descriptions.Item>
+          </Descriptions>
+        ) : null}
+      </Modal>
     </>
   )
 }

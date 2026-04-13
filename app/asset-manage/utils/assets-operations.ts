@@ -20,11 +20,9 @@ export const handleTaskNavigate = (task: Workspace.TaskDetail) => {
  * 从专辑移除作品
  * @param asset_ids 资产ID数组
  * @param albumId 专辑ID
- * @param workspaceId 工作空间ID
  */
-export const removeAssets = async (asset_ids: string[], albumId: string, workspaceId: string) => {
+export const removeAssets = async (asset_ids: string[], albumId: string) => {
   await API.assets.removeAssetsFromAlbum({
-    workspace_id: workspaceId,
     album_id: albumId,
     asset_ids: asset_ids,
   })
@@ -115,7 +113,6 @@ export const deleteItems = async (items: WorkDisplayData[]) => {
  * 添加资产到专辑
  * @param asset_ids 资产ID数组
  * @param albumId 专辑ID
- * @param workspaceId 工作空间ID
  */
 export const addAssetsToAlbum = async (
   asset_ids: string[],
@@ -161,6 +158,55 @@ export const downloadOtherTask = async (item: WorkDisplayData): Promise<void> =>
  * key: {asset_id}-{request_id},音频为{request_id}
  * key要绝对唯一
  */
+/**
+ * 将 `assets` 表记录转为画廊展示数据（无真实任务时构造最小 TaskDetail）
+ */
+export const assetRecordToWorkDisplay = (row: ASSETS.AssetRecord): WorkDisplayData => {
+  const requestId = `asset:${row.id}`
+  const preview = row.preview_url ?? ''
+  const createdAt = row.created_at
+  const syntheticDetail = {
+    title: row.name?.trim() ? row.name : '未命名资产',
+    request_id: requestId,
+    status: TaskStatus.FINISHED,
+    task_type: TaskType.IMAGE,
+    result: {
+      images: [
+        {
+          asset_id: row.id,
+          url: preview,
+          thumbnail_url: preview || undefined,
+          type: row.type ?? undefined,
+          description: row.description ?? undefined,
+          created_by: row.created_by ?? undefined,
+          created_at: createdAt,
+        },
+      ],
+      reference_images: [],
+    },
+    create_time: createdAt,
+  } as ASSETS.TaskDetail
+
+  return {
+    key: row.id,
+    request_id: requestId,
+    assetIds: [row.id],
+    url: preview || undefined,
+    urls: preview ? [preview] : [],
+    thumbnail_url: preview || undefined,
+    taskType: TaskType.IMAGE,
+    total: 1,
+    title: syntheticDetail.title,
+    status: TaskStatus.FINISHED,
+    date: createdAt,
+    assetCatalogType: row.type ?? undefined,
+    assetDescription: row.description ?? undefined,
+    assetCreatedBy: row.created_by ?? undefined,
+    assetCreatedAt: createdAt,
+    detail: syntheticDetail,
+  }
+}
+
 export const responseToAsset = (task: ASSETS.TaskDetail): WorkDisplayData[] => {
   switch (task.task_type) {
     case TaskType.IMAGE:
@@ -178,7 +224,11 @@ export const responseToAsset = (task: ASSETS.TaskDetail): WorkDisplayData[] => {
             title: task.title,
             status: task.status,
             date: task.create_time,
-            detail:task // 后续再看
+            assetCatalogType: image.type,
+            assetDescription: image.description,
+            assetCreatedBy: image.created_by,
+            assetCreatedAt: image.created_at,
+            detail: task,
           }
         }) || []
       )

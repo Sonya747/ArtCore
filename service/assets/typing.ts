@@ -4,14 +4,9 @@ import type { Workspace } from '../workspace/typing'
 export namespace ASSETS {
   export interface AlbumInfo {
     album_id: string
-    workspace_id: string
     name: string
     cover_urls: string[]
     is_default: boolean
-    created_by: string
-    created_at: string
-    updated_at: string
-    last_content_updated_at: string
   }
 
   /**
@@ -25,7 +20,6 @@ export namespace ASSETS {
   }
 
   export interface GetAlbumListParams {
-    workspace_id: string
     page: number
     page_size: number
     keyword?: string | null
@@ -39,23 +33,19 @@ export namespace ASSETS {
   }
 
   export interface CreateAlbumParams {
-    workspace_id: string
     name: string
   }
 
   export interface UpdateAlbumParams {
-    workspace_id: string
     album_id: string
     name: string
   }
 
   export interface DeleteAlbumParams {
-    workspace_id: string
     album_id: string
   }
 
   export interface GetAlbumDetailParams {
-    workspace_id: string
     album_id: string
     page: number
     page_size: number
@@ -64,7 +54,6 @@ export namespace ASSETS {
   }
 
   export interface GetTaskDetailListParams {
-    workspace_id: string
     page: number
     page_size: number
     keyword?: string
@@ -80,7 +69,6 @@ export namespace ASSETS {
   }
 
   export interface GetAssetAlbumIdsParams {
-    workspace_id: string
     asset_id: string
   }
 
@@ -92,13 +80,40 @@ export namespace ASSETS {
   }
 
   export interface RemoveAssetsFromAlbumParams {
-    workspace_id: string
     album_id: string
     asset_ids: string[]
   }
 
   export interface DeleteAssetsParams {
     asset_ids: string[]
+  }
+
+  /** `assets` 表行（API 返回） */
+  export interface AssetRecord {
+    id: string
+    name: string | null
+    type: string | null
+    description: string | null
+    preview_url: string | null
+    created_by: string | null
+    created_at: string
+  }
+
+  export interface FetchAssetsParams {
+    page: number
+    page_size: number
+    keyword?: string | null
+    task_types?: TaskType[]
+    album_id?: string | null
+    signal?: AbortSignal
+  }
+
+  export interface FetchAssetsResponse {
+    page: number
+    page_size: number
+    total_count: number
+    has_more: boolean
+    results: AssetRecord[]
   }
 }
 

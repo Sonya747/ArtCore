@@ -6,3 +6,37 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+/// 与 Neon `assets` 表一致（见 数据存储方案.md）
+model Asset {
+  id           String            @id @db.Uuid
+  workspace_id String            @db.Uuid
+  name         String?           @db.VarChar(100)
+  type         String?           @db.VarChar(20)
+  description  String?
+  preview_url  String?
+  embedding    Unsupported("vector(1536)")?
+  created_by   String?           @db.Uuid
+  created_at   DateTime          @default(now()) @db.Timestamp(6)
+  assetTags    AssetTagMapping[]
+
+  @@map("assets")
+}
+
+model Tag {
+  id        String            @id @db.Uuid
+  name      String?           @unique @db.VarChar(50)
+  assetTags AssetTagMapping[]
+
+  @@map("tags")
+}
+
+model AssetTagMapping {
+  asset_id String @db.Uuid
+  tag_id   String @db.Uuid
+  asset    Asset  @relation(fields: [asset_id], references: [id], onDelete: Cascade)
+  tag      Tag    @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+
+  @@id([asset_id, tag_id])
+  @@map("asset_tag_mapping")
+}

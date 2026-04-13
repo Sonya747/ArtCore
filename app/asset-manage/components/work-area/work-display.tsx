@@ -1,4 +1,5 @@
 import type { MenuProps } from 'antd'
+import { Tag } from 'antd'
 import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import DisplayCard from '@/components/display-card'
 import { SECONDARY_GRADIENT_BUTTON_CLASSNAME } from '@/components/gradient-button'
@@ -6,6 +7,27 @@ import IconFont from '@/components/icon-font'
 import { TaskStatus, TaskType } from '@/service/typing'
 import type { Workspace } from '@/service/workspace/typing'
 import { cn } from '@/utils/cn'
+
+const ASSET_CATALOG_LABELS: Record<string, string> = {
+  character: '角色',
+  weapon: '武器',
+  scene: '场景',
+  style: '风格',
+}
+
+const TASK_TYPE_LABELS: Record<TaskType, string> = {
+  [TaskType.IMAGE]: '图片',
+  [TaskType.CHAT]: '对话图',
+  [TaskType.VIDEO]: '视频',
+  [TaskType.AUDIO]: '音频',
+}
+
+export function formatAssetCatalogTypeLabel(catalogType: string | undefined, taskType: TaskType) {
+  if (catalogType) {
+    return ASSET_CATALOG_LABELS[catalogType] ?? catalogType
+  }
+  return TASK_TYPE_LABELS[taskType] ?? String(taskType)
+}
 
 export interface WorkDisplayData {
   request_id: string
@@ -21,6 +43,11 @@ export interface WorkDisplayData {
   isTask?: boolean // 是否为任务
   assetIds?: string[] // 任务包含作品asset_id列表
   urls?: string[] // 任务下载用的URL列表
+  /** 资产类目（如 character / weapon），与任务类型 taskType 不同 */
+  assetCatalogType?: string
+  assetDescription?: string
+  assetCreatedBy?: string
+  assetCreatedAt?: string
   detail: Workspace.TaskDetail // 原始完整任务数据
 }
 
@@ -233,23 +260,29 @@ const WorkDisplay = ({
     onClick?.(data)
   }, [onClick, data])
 
+  const typeTagLabel = formatAssetCatalogTypeLabel(data.assetCatalogType, data.taskType)
+
   return (
-    <DisplayCard
-      aspectRatio={aspectRatio}
-      cover={getCover}
-      hoverScale={data.taskType !== TaskType.VIDEO}
-      selected={selected}
-      selectable={selectable}
-      actions={actionItems}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      title={titleContent}
-      description={formatDate}
-      avatar={getTotalText}
-      onSelect={onSelect ? handleSelect : undefined}
-      onClick={onClick ? handleCardClick : undefined}
-      className='cursor-pointer'
-    />
+    <div className='flex w-full flex-col gap-2'>
+      <DisplayCard
+        aspectRatio={aspectRatio}
+        cover={getCover}
+        hoverScale={data.taskType !== TaskType.VIDEO}
+        selected={selected}
+        selectable={selectable}
+        actions={actionItems}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        title={titleContent}
+        description={formatDate}
+        avatar={typeTagLabel}
+        onSelect={onSelect ? handleSelect : undefined}
+        onClick={onClick ? handleCardClick : undefined}
+        className='cursor-pointer'
+      />
+      <div className='flex flex-wrap gap-1.5 px-0.5'>
+      </div>
+    </div>
   )
 }
 

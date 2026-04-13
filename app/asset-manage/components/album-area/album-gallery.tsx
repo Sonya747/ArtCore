@@ -6,11 +6,10 @@ import IconFont from '@/components/icon-font'
 import Search from '@/components/search'
 import { ASSETS } from '@/service/assets/typing'
 import { useAlbumStore } from '@/store/album'
-import { useGlobalStore } from '@/store/global'
 import Album from './album'
 import { AlbumNameModal, type AlbumNameModalType } from './album-modal'
 import { usePageSlideAnimation } from './use-page-slide-animation'
-import './album-gallery.css'
+import './album-gallery.css' //TODO
 import { assetsService } from '@/service/assets'
 
 interface AlbumGalleryProps {
@@ -23,7 +22,6 @@ interface AlbumGalleryProps {
 const AlbumGallery = ({ onAlbumSelect }: AlbumGalleryProps) => {
   const navigate = useNavigate()
   const { modal, message } = App.useApp()
-  const workspaceId = useGlobalStore((state) => state.currentWorkspace?.workspace_id)
 
   // 使用 album store
   const { albumListData, loading, page, pageSize, setPage, setKeyword, fetchAlbumList } =
@@ -40,13 +38,10 @@ const AlbumGallery = ({ onAlbumSelect }: AlbumGalleryProps) => {
     loading,
   })
 
-  // 当工作空间变化时，获取专辑列表
+  // 初始化时拉取标签列表（用于专辑展示）
   useEffect(() => {
-    //现在没有workspaceId，所以先写死
-    if (workspaceId ?? 1) {
-      fetchAlbumList(workspaceId)
-    }
-  }, [workspaceId, fetchAlbumList])
+    fetchAlbumList()
+  }, [fetchAlbumList])
 
   const albums = albumListData?.results || []
   const totalCount = albumListData?.total_count || 0
@@ -72,10 +67,6 @@ const AlbumGallery = ({ onAlbumSelect }: AlbumGalleryProps) => {
    * 打开新建专辑弹窗
    */
   const handleCreateAlbum = () => {
-    if (!workspaceId) {
-      message.warning('请先选择工作空间')
-      return
-    }
     setModalType('create')
     setCurrentAlbum(undefined)
     setModalOpen(true)
@@ -85,11 +76,6 @@ const AlbumGallery = ({ onAlbumSelect }: AlbumGalleryProps) => {
    * 打开重命名专辑弹窗
    */
   const handleRenameAlbum = (album: ASSETS.AlbumInfo) => {
-    if (!workspaceId) {
-      message.warning('请先选择工作空间')
-      return
-    }
-
     if (album.is_default) {
       message.warning('默认专辑不支持重命名')
       return
@@ -104,11 +90,6 @@ const AlbumGallery = ({ onAlbumSelect }: AlbumGalleryProps) => {
    * 打开删除专辑弹窗
    */
   const handleDeleteAlbum = (album: ASSETS.AlbumInfo) => {
-    if (!workspaceId) {
-      message.warning('请先选择工作空间')
-      return
-    }
-
     if (album.is_default) {
       message.warning('默认专辑不支持删除')
       return
@@ -130,9 +111,7 @@ const AlbumGallery = ({ onAlbumSelect }: AlbumGalleryProps) => {
         try {
           await handleDelete(album.album_id)
           message.success('专辑删除成功')
-          if (workspaceId) {
-            fetchAlbumList(workspaceId)
-          }
+          fetchAlbumList()
         } catch (error: any) {
           message.error(error?.message || '删除专辑失败')
         }
@@ -144,37 +123,31 @@ const AlbumGallery = ({ onAlbumSelect }: AlbumGalleryProps) => {
    * 处理创建专辑
    */
   const handleCreate = async (name: string) => {
-    if (!workspaceId) return
     await assetsService.createAlbum({
-      workspace_id: workspaceId,
       name,
     })
-    fetchAlbumList(workspaceId)
+    fetchAlbumList()
   }
 
   /**
    * 处理重命名专辑
    */
   const handleRename = async (albumId: string, name: string) => {
-    if (!workspaceId) return
     await assetsService.updateAlbum({
-      workspace_id: workspaceId,
       album_id: albumId,
       name,
     })
-    fetchAlbumList(workspaceId)
+    fetchAlbumList()
   }
 
   /**
    * 处理删除专辑
    */
   const handleDelete = async (albumId: string) => {
-    if (!workspaceId) return
     await assetsService.deleteAlbum({
-      workspace_id: workspaceId,
       album_id: albumId,
     })
-    fetchAlbumList(workspaceId)
+    fetchAlbumList()
   }
 
   const handleSearch = (value: string) => {
@@ -234,22 +207,17 @@ const AlbumGallery = ({ onAlbumSelect }: AlbumGalleryProps) => {
       </div>
 
       {/* 专辑操作弹窗 */}
-      {workspaceId && (
-        <AlbumNameModal
-          open={modalOpen}
-          type={modalType}
-          album={currentAlbum}
-          workspaceId={workspaceId}
-          onCancel={() => setModalOpen(false)}
-          onSuccess={() => {
-            if (workspaceId) {
-              fetchAlbumList(workspaceId)
-            }
-          }}
-          onCreate={handleCreate}
-          onRename={handleRename}
-        />
-      )}
+      <AlbumNameModal
+        open={modalOpen}
+        type={modalType}
+        album={currentAlbum}
+        onCancel={() => setModalOpen(false)}
+        onSuccess={() => {
+          fetchAlbumList()
+        }}
+        onCreate={handleCreate}
+        onRename={handleRename}
+      />
     </div>
   )
 }

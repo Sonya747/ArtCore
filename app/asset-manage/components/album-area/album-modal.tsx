@@ -15,7 +15,6 @@ export interface AlbumModalProps {
   open: boolean
   type: AlbumNameModalType
   album?: ASSETS.AlbumInfo
-  workspaceId: string
   onCancel: () => void
   onSuccess: () => void
   onCreate?: (name: string) => Promise<void>
@@ -29,7 +28,6 @@ export const AlbumNameModal = ({
   open,
   type,
   album,
-  workspaceId,
   onCancel,
   onSuccess,
   onCreate,
@@ -54,7 +52,6 @@ export const AlbumNameModal = ({
   const checkAlbumNameDuplicate = async (albumName: string): Promise<boolean> => {
     try {
       const response = await assetsService.getAlbumList({
-        workspace_id: workspaceId,
         page: 0,
         page_size: 10,
         keyword: albumName,
@@ -190,7 +187,6 @@ export type AlbumViewType = 'list' | 'folder'
 
 export interface AddToAlbumModalProps {
   open: boolean
-  workspaceId: string
   existAlbumIds?: string[]
   onCancel: () => void
   onSuccess?: (selectedAlbumIds: string[]) => void
@@ -238,7 +234,6 @@ const highlightText = (text: string, searchKeyword: string) => {
  */
 export const AddToAlbumModal = ({
   open,
-  workspaceId,
   existAlbumIds = [],
   onCancel,
   onSuccess,
@@ -254,9 +249,7 @@ export const AddToAlbumModal = ({
 
   const { loading, run: loadAlbums } = useRequest(
     async (pageNum: number, searchKeyword?: string) => {
-      if (!workspaceId) return null
       const response = await assetsService.getAlbumList({
-        workspace_id: workspaceId,
         page: pageNum,
         page_size: PAGE_SIZE,
         keyword: searchKeyword || undefined,
@@ -290,11 +283,9 @@ export const AddToAlbumModal = ({
       setPage(0)
       setAlbums([])
       setHasMore(true)
-      if (workspaceId) {
-        loadAlbums(0, value)
-      }
+      loadAlbums(0, value)
     },
-    [workspaceId, loadAlbums]
+    [loadAlbums]
   )
 
   // 处理选择专辑（多选）
@@ -428,7 +419,7 @@ export const AddToAlbumModal = ({
 
   // 弹窗打开时初始化，关闭时重置状态
   useEffect(() => {
-    if (open && workspaceId) {
+    if (open) {
       // 设置选中列表
       setSelectedAlbumIds([...existAlbumIds])
       // 重置状态
@@ -449,7 +440,7 @@ export const AddToAlbumModal = ({
       setIsLoadingMore(false)
       setSelectedAlbumIds([])
     }
-  }, [open, workspaceId, existAlbumIdsKey])
+  }, [open, existAlbumIdsKey])
 
   // 滚动事件监听
   useEffect(() => {

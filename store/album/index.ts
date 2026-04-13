@@ -1,6 +1,5 @@
 import { message } from 'antd'
 import { create } from 'zustand'
-import { useGlobalStore } from '../global'
 import type { AlbumStore } from './typing'
 import { assetsService } from '@/service/assets'
 
@@ -27,20 +26,13 @@ export const useAlbumStore = create<AlbumStore>((set, get) => ({
     get().fetchAlbumList()
   },
 
-  fetchAlbumList: async (workspaceId) => {
+  fetchAlbumList: async () => {
     const { page, pageSize, keyword } = get()
-
-    let workspace_id = workspaceId || ''
-
-    if (!workspaceId) {
-      workspace_id = useGlobalStore.getState().currentWorkspace?.workspace_id as string
-    }
 
     set({ loading: true })
 
     try {
       const response = await assetsService.getAlbumList({
-        workspace_id,
         page,
         page_size: pageSize,
         keyword: keyword || undefined,

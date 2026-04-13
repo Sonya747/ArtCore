@@ -25,7 +25,7 @@ export interface AlbumStore {
   /**
    * 获取专辑列表
    */
-  fetchAlbumList: (workspaceId?: string) => Promise<void>
+  fetchAlbumList: () => Promise<void>
   /**
    * 刷新当前页的专辑列表
    * @param effectAlbumIds 操作专辑后影响专辑 ID 列表，不传默认刷新，传入会判断是否需要刷新
