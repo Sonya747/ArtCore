@@ -121,6 +121,13 @@ export const assetsService = {
       body: JSON.stringify(params),
     })
   },
+  async getAssetTags(params: ASSETS.GetAssetTagsParams): Promise<ASSETS.GetAssetTagsResponse> {
+    return requestJson<ASSETS.GetAssetTagsResponse>('/api/asset-management/asset-tags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    })
+  },
 
   async addAssetsToAlbum(params: ASSETS.AddAssetsToAlbumParams): Promise<void> {
     await requestJson('/api/asset-management/asset-tag-mapping/add', {

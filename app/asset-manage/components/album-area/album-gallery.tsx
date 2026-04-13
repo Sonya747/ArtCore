@@ -16,7 +16,7 @@ interface AlbumGalleryProps {
   /**
    * 在新页面中使用时，点击专辑仅切换下方作品列表，而不跳转路由
    */
-  onAlbumSelect?: (albumId: string, albumName: string) => void
+  onAlbumSelect?: (albumId?: string, albumName?: string) => void
 }
 
 const AlbumGallery = ({ onAlbumSelect }: AlbumGalleryProps) => {
@@ -31,6 +31,7 @@ const AlbumGallery = ({ onAlbumSelect }: AlbumGalleryProps) => {
   const [modalOpen, setModalOpen] = useState(false)
   const [modalType, setModalType] = useState<AlbumNameModalType>('create')
   const [currentAlbum, setCurrentAlbum] = useState<ASSETS.AlbumInfo | undefined>(undefined)
+  const [selectedAlbumId, setSelectedAlbumId] = useState<string | undefined>(undefined)
 
   // 翻页动画
   const { animationClassName, pageKey } = usePageSlideAnimation({
@@ -47,18 +48,29 @@ const AlbumGallery = ({ onAlbumSelect }: AlbumGalleryProps) => {
   const totalCount = albumListData?.total_count || 0
 
   const handleSelect = (albumId: string, albumName: string) => {
+    const nextAlbumId = selectedAlbumId === albumId ? undefined : albumId
+    const nextAlbumName = selectedAlbumId === albumId ? undefined : albumName
+    setSelectedAlbumId(nextAlbumId)
+
     if (onAlbumSelect) {
-      onAlbumSelect(albumId, albumName)
+      onAlbumSelect(nextAlbumId, nextAlbumName)
+      return
+    }
+
+    if (!nextAlbumId) {
+      navigate({
+        to: '/asset-manage',
+      })
       return
     }
 
     navigate({
       to: '/asset-management/{-$albumId}',
       params: {
-        albumId,
+        albumId: nextAlbumId,
       },
       search: {
-        albumName,
+        albumName: nextAlbumName ?? '',
       },
     })
   }

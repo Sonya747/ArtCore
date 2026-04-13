@@ -73,6 +73,14 @@ export namespace ASSETS {
   }
 
   export type GetAssetAlbumIdsResponse = string[]
+  export interface AssetTagInfo {
+    id: string
+    name: string
+  }
+  export interface GetAssetTagsParams {
+    asset_id: string
+  }
+  export type GetAssetTagsResponse = AssetTagInfo[]
 
   export interface AddAssetsToAlbumParams {
     album_ids: string[]

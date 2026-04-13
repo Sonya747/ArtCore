@@ -26,17 +26,6 @@ export async function POST(req: Request) {
     const keyword = body.keyword?.trim()
     const albumId = body.album_id?.trim()
 
-    // 专辑与资产的关联尚未在库表建模时，专辑视图返回空列表
-    if (albumId) {
-      return NextResponse.json({
-        page,
-        page_size: pageSize,
-        total_count: 0,
-        has_more: false,
-        results: [],
-      })
-    }
-
     if (!shouldQueryAssets(body.task_types)) {
       return NextResponse.json({
         page,
@@ -47,24 +36,83 @@ export async function POST(req: Request) {
       })
     }
 
-    const where: Prisma.AssetWhereInput = {}
-    if (keyword) {
-      where.OR = [
-        { name: { contains: keyword, mode: 'insensitive' } },
-        { description: { contains: keyword, mode: 'insensitive' } },
-      ]
-    }
-
     const prisma = getAssetsPrisma()
-    const [total, rows] = await Promise.all([
-      prisma.asset.count({ where }),
-      prisma.asset.findMany({
-        where,
-        orderBy: { created_at: 'desc' },
-        skip: page * pageSize,
-        take: pageSize,
-      }),
-    ])
+    let total = 0
+    let rows: Array<{
+      id: string
+      name: string | null
+      type: string | null
+      description: string | null
+      preview_url: string | null
+      created_by: string | null
+      created_at: Date
+    }> = []
+
+    if (albumId) {
+      const [countRows, filteredRows] = await Promise.all([
+        keyword
+          ? prisma.$queryRaw<Array<{ total: bigint }>>`
+              SELECT COUNT(*)::bigint AS total
+              FROM assets a
+              INNER JOIN asset_tag_mapping atm ON atm.asset_id = a.id
+              WHERE atm.tag_id = ${albumId}::uuid
+                AND (
+                  COALESCE(a.name, '') ILIKE ${`%${keyword}%`}
+                  OR COALESCE(a.description, '') ILIKE ${`%${keyword}%`}
+                )
+            `
+          : prisma.$queryRaw<Array<{ total: bigint }>>`
+              SELECT COUNT(*)::bigint AS total
+              FROM assets a
+              INNER JOIN asset_tag_mapping atm ON atm.asset_id = a.id
+              WHERE atm.tag_id = ${albumId}::uuid
+            `,
+        keyword
+          ? prisma.$queryRaw<typeof rows>`
+              SELECT a.id::text, a.name, a.type, a.description, a.preview_url, a.created_by::text, a.created_at
+              FROM assets a
+              INNER JOIN asset_tag_mapping atm ON atm.asset_id = a.id
+              WHERE atm.tag_id = ${albumId}::uuid
+                AND (
+                  COALESCE(a.name, '') ILIKE ${`%${keyword}%`}
+                  OR COALESCE(a.description, '') ILIKE ${`%${keyword}%`}
+                )
+              ORDER BY a.created_at DESC
+              LIMIT ${pageSize}
+              OFFSET ${page * pageSize}
+            `
+          : prisma.$queryRaw<typeof rows>`
+              SELECT a.id::text, a.name, a.type, a.description, a.preview_url, a.created_by::text, a.created_at
+              FROM assets a
+              INNER JOIN asset_tag_mapping atm ON atm.asset_id = a.id
+              WHERE atm.tag_id = ${albumId}::uuid
+              ORDER BY a.created_at DESC
+              LIMIT ${pageSize}
+              OFFSET ${page * pageSize}
+            `,
+      ])
+      total = Number(countRows[0]?.total ?? BigInt(0))
+      rows = filteredRows
+    } else {
+      const where: Prisma.AssetWhereInput = {}
+      if (keyword) {
+        where.OR = [
+          { name: { contains: keyword, mode: 'insensitive' } },
+          { description: { contains: keyword, mode: 'insensitive' } },
+        ]
+      }
+      const [count, foundRows] = await Promise.all([
+        prisma.asset.count({ where }),
+        prisma.asset.findMany({
+          where,
+          orderBy: { created_at: 'desc' },
+          skip: page * pageSize,
+          take: pageSize,
+        }),
+      ])
+      total = count
+      rows = foundRows
+    }
 
     const results = rows.map((r) => ({
       id: r.id,

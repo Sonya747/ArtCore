@@ -280,8 +280,6 @@ const WorkDisplay = ({
         onClick={onClick ? handleCardClick : undefined}
         className='cursor-pointer'
       />
-      <div className='flex flex-wrap gap-1.5 px-0.5'>
-      </div>
     </div>
   )
 }

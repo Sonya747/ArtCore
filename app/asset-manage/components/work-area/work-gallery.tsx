@@ -1,4 +1,4 @@
-import { App, Descriptions, type MenuProps, Modal, Spin } from 'antd'
+import { App, Descriptions, type MenuProps, Modal, Spin, Tag } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import EmptyAssets from '@/assets/images/empty-asset.svg'
 import { PRIMARY_GRADIENT_BUTTON_CLASSNAME } from '@/components/gradient-button'
@@ -27,6 +27,8 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
   const [existAlbumIds, setExistAlbumIds] = useState<string[]>([]) // 资产已存在的专辑ID列表
   const [deletedKeys, setDeletedKeys] = useState<Set<string>>(new Set()) // 不显示的项目 key，用于删除/移除操作后不显示项目（但不重新请求数据）
   const [assetDetailItem, setAssetDetailItem] = useState<WorkDisplayData | null>(null)
+  const [assetDetailTags, setAssetDetailTags] = useState<string[]>([])
+  const [assetDetailLoading, setAssetDetailLoading] = useState(false)
   const { modal, message } = App.useApp()
 
   // 操作相关逻辑
@@ -285,6 +287,28 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
     ]
   }
 
+  const handleOpenAssetDetail = useCallback(
+    async (item: WorkDisplayData) => {
+      setAssetDetailItem(item)
+      setAssetDetailLoading(true)
+      try {
+        const assetId = item.assetIds?.[0]
+        if (!assetId) {
+          setAssetDetailTags([])
+          return
+        }
+        const tags = await API.assets.getAssetTags({ asset_id: assetId })
+        setAssetDetailTags(tags.map((tag) => tag.name).filter(Boolean))
+      } catch (error) {
+        console.error('查询资产关联标签失败:', error)
+        setAssetDetailTags([])
+      } finally {
+        setAssetDetailLoading(false)
+      }
+    },
+    []
+  )
+
   return (
     <>
       <div
@@ -346,7 +370,7 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
                 selected={isSelected(item)}
                 selectable={selecting}
                 onSelect={handleSelect}
-                onClick={() => setAssetDetailItem(item)}
+                onClick={() => handleOpenAssetDetail(item)}
                 actionItems={getActionItems(item)}
               />
             ))}
@@ -377,38 +401,74 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
         title='资产详情'
         open={!!assetDetailItem}
         footer={null}
-        onCancel={() => setAssetDetailItem(null)}
+        onCancel={() => {
+          setAssetDetailItem(null)
+          setAssetDetailTags([])
+        }}
         destroyOnHidden
-        width={480}
+        width={820}
       >
         {assetDetailItem ? (
-          <Descriptions column={1} size='small' labelStyle={{ width: 96 }}>
-            <Descriptions.Item label='类型'>
-              {formatAssetCatalogTypeLabel(
-                assetDetailItem.assetCatalogType,
-                assetDetailItem.taskType
+          <div className='grid grid-cols-[280px_1fr] gap-5'>
+            <div className='w-full h-[380px] rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center'>
+              {assetDetailItem.thumbnail_url || assetDetailItem.url ? (
+                <img
+                  src={assetDetailItem.thumbnail_url ?? assetDetailItem.url}
+                  alt={assetDetailItem.title}
+                  className='w-full h-full object-cover'
+                />
+              ) : (
+                <span className='text-neutral-400 text-sm'>暂无预览图</span>
               )}
-            </Descriptions.Item>
-            <Descriptions.Item label='描述'>
-              {assetDetailItem.assetDescription?.trim()
-                ? assetDetailItem.assetDescription
-                : '—'}
-            </Descriptions.Item>
-            <Descriptions.Item label='创建者'>
-              {assetDetailItem.assetCreatedBy?.trim() ? assetDetailItem.assetCreatedBy : '—'}
-            </Descriptions.Item>
-            <Descriptions.Item label='创建时间'>
-              {assetDetailItem.assetCreatedAt
-                ? (() => {
-                    try {
-                      return new Date(assetDetailItem.assetCreatedAt!).toLocaleString('zh-CN')
-                    } catch {
-                      return assetDetailItem.assetCreatedAt
-                    }
-                  })()
-                : '—'}
-            </Descriptions.Item>
-          </Descriptions>
+            </div>
+            <Descriptions column={1} size='small' labelStyle={{ width: 110 }}>
+              <Descriptions.Item label='资产ID'>
+                {assetDetailItem.assetIds?.[0] ?? '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label='名称'>{assetDetailItem.title || '—'}</Descriptions.Item>
+              <Descriptions.Item label='类型'>
+                {formatAssetCatalogTypeLabel(
+                  assetDetailItem.assetCatalogType,
+                  assetDetailItem.taskType
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label='描述'>
+                {assetDetailItem.assetDescription?.trim() ? assetDetailItem.assetDescription : '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label='预览URL'>
+                <span className='break-all'>{assetDetailItem.url ?? '—'}</span>
+              </Descriptions.Item>
+              <Descriptions.Item label='创建者'>
+                {assetDetailItem.assetCreatedBy?.trim() ? assetDetailItem.assetCreatedBy : '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label='创建时间'>
+                {assetDetailItem.assetCreatedAt
+                  ? (() => {
+                      try {
+                        return new Date(assetDetailItem.assetCreatedAt!).toLocaleString('zh-CN')
+                      } catch {
+                        return assetDetailItem.assetCreatedAt
+                      }
+                    })()
+                  : '—'}
+              </Descriptions.Item>
+              <Descriptions.Item label='标签'>
+                {assetDetailLoading ? (
+                  <Spin size='small' />
+                ) : assetDetailTags.length ? (
+                  <div className='flex flex-wrap gap-1.5'>
+                    {assetDetailTags.map((tag) => (
+                      <Tag key={tag} className='m-0'>
+                        {tag}
+                      </Tag>
+                    ))}
+                  </div>
+                ) : (
+                  '—'
+                )}
+              </Descriptions.Item>
+            </Descriptions>
+          </div>
         ) : null}
       </Modal>
     </>
