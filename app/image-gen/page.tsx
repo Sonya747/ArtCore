@@ -78,6 +78,50 @@ const MODEL_OPTIONS = [
 ]
 
 const LAST_MODEL_KEY = "image_gen_last_model"
+const BASE64_IMAGE_DATA_URL_RE = /^data:image\/[a-zA-Z0-9.+-]+;base64,/
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result)
+      } else {
+        reject(new Error("图片读取失败"))
+      }
+    }
+    reader.onerror = () => {
+      reject(new Error("图片读取失败"))
+    }
+    reader.readAsDataURL(blob)
+  })
+}
+
+async function normalizeImageToBase64DataUrl(raw: string): Promise<string | null> {
+  if (!raw) {
+    return null
+  }
+  if (BASE64_IMAGE_DATA_URL_RE.test(raw)) {
+    return raw
+  }
+  if (raw.startsWith("data:")) {
+    return null
+  }
+  try {
+    const response = await fetch(raw)
+    if (!response.ok) {
+      return null
+    }
+    const blob = await response.blob()
+    if (!blob.type.startsWith("image/")) {
+      return null
+    }
+    const dataUrl = await blobToDataUrl(blob)
+    return BASE64_IMAGE_DATA_URL_RE.test(dataUrl) ? dataUrl : null
+  } catch {
+    return null
+  }
+}
 
 /**
  * 获取上次使用的模型
@@ -208,6 +252,33 @@ export default function Page() {
           return undefined
         }
 
+        const referenceImageRawList = Array.isArray(values.referenceImages)
+          ? values.referenceImages
+              .map((item: unknown) => {
+                if (
+                  item &&
+                  typeof item === "object" &&
+                  "data" in item &&
+                  typeof (item as { data?: unknown }).data === "string"
+                ) {
+                  return (item as { data: string }).data
+                }
+                return ""
+              })
+              .filter((item: string) => item.length > 0)
+          : []
+        const referenceImageDataList = (
+          await Promise.all(
+            referenceImageRawList.map((item: string) => normalizeImageToBase64DataUrl(item)),
+          )
+        ).filter((item): item is string => Boolean(item))
+        const image =
+          referenceImageDataList.length === 0
+            ? undefined
+            : referenceImageDataList.length === 1
+              ? referenceImageDataList[0]
+              : referenceImageDataList
+
         const apiKey = process.env.NEXT_PUBLIC_ARK_API_KEY
         if (!apiKey) {
           message.error("未配置环境变量 NEXT_PUBLIC_ARK_API_KEY")
@@ -215,19 +286,18 @@ export default function Page() {
         }
 
         try {
-          const rawResponse = await doubaoImageGenerations(
-            {
-              model: values.model,
-              prompt: values.prompt,
-              sequential_image_generation:
-                values.doubaoParams?.sequential_image_generation ?? "disabled",
-              response_format: values.doubaoParams?.response_format ?? "url",
-              size: values.doubaoParams?.size ?? "2K",
-              stream: false,
-              watermark: values.doubaoParams?.watermark ?? true,
-            },
-            apiKey,
-          )
+          const requestBody: Parameters<typeof doubaoImageGenerations>[0] = {
+            model: values.model,
+            prompt: values.prompt,
+            sequential_image_generation:
+              values.doubaoParams?.sequential_image_generation ?? "disabled",
+            response_format: values.doubaoParams?.response_format ?? "url",
+            size: values.doubaoParams?.size ?? "2K",
+            stream: false,
+            watermark: values.doubaoParams?.watermark ?? true,
+            image,
+          }
+          const rawResponse = await doubaoImageGenerations(requestBody, apiKey)
           const raw = rawResponse as unknown as Record<string, unknown>
           return parseImageGenResponse(raw, values.prompt, values.model) ?? null
         } catch (e) {
@@ -331,12 +401,10 @@ export default function Page() {
           <section className="w-[360px] shrink-0 rounded-2xl bg-card-bg-color p-5 shadow-sm">
             <div className="text-lg font-semibold text-block-title-color mb-8">图片创作</div>
 
-            {/* 参考图（非豆包 Seedream） */}
-            {!isDoubaoModel && (
-              <Form.Item name="referenceImages" className="mt-4">
+            {/* 参考图 */}
+             <Form.Item name="referenceImages" className="mt-4">
                 <ImageUploader {...imageUploaderProps} />
               </Form.Item>
-            )}
 
             {/* 创意描述 */}
             <Form.Item

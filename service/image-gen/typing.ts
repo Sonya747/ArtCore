@@ -34,6 +34,58 @@ export namespace DoubaoImageGen {
   }
 }
 
+/**
+ * 火山方舟 Ark — Chat Completions API（豆包等语言模型）
+ * @see https://www.volcengine.com/docs/82379/1494384
+ */
+export namespace ArkChat {
+  export interface Message {
+    role: "system" | "user" | "assistant"
+    content: string
+  }
+
+  export interface JsonSchema {
+    name: string
+    strict?: boolean
+    schema: Record<string, unknown>
+  }
+
+  export interface ResponseFormat {
+    type: "json_schema" | "text"
+    json_schema?: JsonSchema
+  }
+
+  export interface CompletionsRequest {
+    model: string
+    messages: Message[]
+    response_format?: ResponseFormat
+    temperature?: number
+    max_tokens?: number
+    stream?: boolean
+  }
+
+  export interface Choice {
+    index: number
+    message: Message
+    finish_reason: string
+  }
+
+  export interface Usage {
+    prompt_tokens: number
+    completion_tokens: number
+    total_tokens: number
+  }
+
+  export interface CompletionsResponse {
+    id: string
+    object: string
+    created: number
+    model: string
+    choices: Choice[]
+    usage: Usage
+  }
+}
+
 export namespace PromptEngineering {
   export interface UserInput {
     /** 用户原始自然语言输入 */
