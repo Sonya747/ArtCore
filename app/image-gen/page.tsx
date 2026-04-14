@@ -1,15 +1,23 @@
 "use client"
 
 import { useDebounceFn } from "ahooks"
-import { App, Form, Select, Switch } from "antd"
+import { CheckOutlined, CloseOutlined, LoadingOutlined } from "@ant-design/icons"
+import { App, Form, Modal, Select, Switch } from "antd"
 import axios from "axios"
-import { useCallback, useLayoutEffect, useMemo, useState } from "react"
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react"
 import GradientButton from "@/components/gradient-button"
 import IconFont from "@/components/icon-font"
 import ImageUploader from "@/components/image-uploader"
 import type { ImageUploaderProps } from "@/components/image-uploader/types"
 import PromptInput from "@/components/prompt-input"
-import { doubaoImageGenerations } from "@/service/image-gen"
+import {
+  doubaoImageGenerations,
+  parseSemanticWithLLM,
+  retrieveAssetContext,
+  synthesizePromptWithLLM,
+} from "@/service/image-gen"
+import type { PromptEngineering, DoubaoImageGen } from "@/service/image-gen"
+import { cn } from "@/utils/cn"
 import { ls } from "@/utils/localStorage"
 import { uploadRemoteImageUrlsToQiniu } from "@/utils/qiniu-upload"
 
@@ -79,6 +87,70 @@ const MODEL_OPTIONS = [
 
 const LAST_MODEL_KEY = "image_gen_last_model"
 const BASE64_IMAGE_DATA_URL_RE = /^data:image\/[a-zA-Z0-9.+-]+;base64,/
+
+type PipelineStage = "idle" | "semantic" | "assets" | "synthesis" | "done" | "error"
+
+interface PipelineState {
+  open: boolean
+  stage: PipelineStage
+  error?: string
+  userPrompt: string
+  semantic: PromptEngineering.SemanticParseResult | null
+  assets: PromptEngineering.AssetRetrievalResult | null
+  synthesis: PromptEngineering.PromptSynthesisResult | null
+  editedPrompt: string
+  pendingPayload: DoubaoImageGen.GenerationsRequest | null
+  userRefImages: string[]
+  formValues: Record<string, any> | null
+}
+
+const INITIAL_PIPELINE: PipelineState = {
+  open: false,
+  stage: "idle",
+  userPrompt: "",
+  semantic: null,
+  assets: null,
+  synthesis: null,
+  editedPrompt: "",
+  pendingPayload: null,
+  userRefImages: [],
+  formValues: null,
+}
+
+const PIPELINE_STEPS = [
+  { key: "semantic", label: "语义解析", desc: "解析创意描述的主体、装备、场景与风格" },
+  { key: "assets", label: "资产检索", desc: "从资产库中匹配关联素材" },
+  { key: "synthesis", label: "Prompt 合成", desc: "融合语义与资产生成高质量英文提示词" },
+] as const
+
+const SEMANTIC_DIM_LABELS: Record<string, string> = {
+  subject: "主体",
+  equipment: "装备",
+  scene: "场景",
+  style: "风格",
+}
+
+function getPipelineStepStatus(
+  stepKey: "semantic" | "assets" | "synthesis",
+  pl: PipelineState,
+): "done" | "active" | "pending" | "error" {
+  const order = ["semantic", "assets", "synthesis"] as const
+  const stepIdx = order.indexOf(stepKey)
+  if (pl.stage === "idle") return "pending"
+  if (pl.stage === "done") return "done"
+  if (pl.stage === "error") {
+    const dataAvailable = [pl.semantic !== null, pl.assets !== null, pl.synthesis !== null]
+    const errorIdx = dataAvailable.indexOf(false)
+    if (stepIdx < errorIdx) return "done"
+    if (stepIdx === errorIdx) return "error"
+    return "pending"
+  }
+  const currentIdx = order.indexOf(pl.stage as (typeof order)[number])
+  if (currentIdx === -1) return "pending"
+  if (stepIdx < currentIdx) return "done"
+  if (stepIdx === currentIdx) return "active"
+  return "pending"
+}
 
 function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -216,6 +288,9 @@ export default function Page() {
 
   const isDoubaoModel = model === DOUBAO_MODEL //TODO之后改成映射
 
+  const [pipeline, setPipeline] = useState<PipelineState>(INITIAL_PIPELINE)
+  const pipelineAbortRef = useRef(false)
+
   const runOssUpload = useCallback(
     async (urls: string[]) => {
       if (urls.length === 0) {
@@ -242,14 +317,19 @@ export default function Page() {
     void runOssUpload(getResultImageUrls(result))
   }, [result, runOssUpload])
 
-  const handleGenerate = () => {
-    setIsLoading(true)
+  const handleOptimize = () => {
     form
       .validateFields()
       .then(async (values) => {
         if (values.model !== DOUBAO_MODEL) {
           message.info("尚未接入")
-          return undefined
+          return
+        }
+
+        const apiKey = process.env.NEXT_PUBLIC_ARK_API_KEY
+        if (!apiKey) {
+          message.error("未配置环境变量 NEXT_PUBLIC_ARK_API_KEY")
+          return
         }
 
         const referenceImageRawList = Array.isArray(values.referenceImages)
@@ -267,85 +347,195 @@ export default function Page() {
               })
               .filter((item: string) => item.length > 0)
           : []
-        const referenceImageDataList = (
+        const userRefImages = (
           await Promise.all(
             referenceImageRawList.map((item: string) => normalizeImageToBase64DataUrl(item)),
           )
         ).filter((item): item is string => Boolean(item))
-        const image =
-          referenceImageDataList.length === 0
-            ? undefined
-            : referenceImageDataList.length === 1
-              ? referenceImageDataList[0]
-              : referenceImageDataList
 
-        const apiKey = process.env.NEXT_PUBLIC_ARK_API_KEY
-        if (!apiKey) {
-          message.error("未配置环境变量 NEXT_PUBLIC_ARK_API_KEY")
-          return undefined
-        }
+        pipelineAbortRef.current = false
+        setPipeline({
+          ...INITIAL_PIPELINE,
+          open: true,
+          stage: "semantic",
+          userPrompt: values.prompt,
+          userRefImages,
+          formValues: values,
+        })
 
         try {
-          const requestBody: Parameters<typeof doubaoImageGenerations>[0] = {
+          const semantic = await parseSemanticWithLLM({ text: values.prompt }, apiKey)
+          if (pipelineAbortRef.current) return
+          setPipeline((prev) => ({ ...prev, stage: "assets", semantic }))
+
+          const assets = await retrieveAssetContext(semantic)
+          if (pipelineAbortRef.current) return
+          setPipeline((prev) => ({ ...prev, stage: "synthesis", assets }))
+
+          const synthesis = await synthesizePromptWithLLM(semantic, assets, apiKey)
+          if (pipelineAbortRef.current) return
+
+          const assetImages = (["subject", "equipment", "scene", "style"] as const)
+            .map((k) => assets[k])
+            .filter(
+              (a): a is PromptEngineering.AssetReference => !!a?.matched && !!a.image_url,
+            )
+            .map((a) => a.image_url!)
+          const allImages = [...userRefImages, ...assetImages]
+
+          const pendingPayload: DoubaoImageGen.GenerationsRequest = {
             model: values.model,
-            prompt: values.prompt,
+            prompt: synthesis.prompt,
+            image: allImages.length > 0 ? allImages : undefined,
             sequential_image_generation:
               values.doubaoParams?.sequential_image_generation ?? "disabled",
             response_format: values.doubaoParams?.response_format ?? "url",
             size: values.doubaoParams?.size ?? "2K",
-            stream: false,
             watermark: values.doubaoParams?.watermark ?? true,
-            image,
+            stream: false,
           }
-          const rawResponse = await doubaoImageGenerations(requestBody, apiKey)
-          const raw = rawResponse as unknown as Record<string, unknown>
-          return parseImageGenResponse(raw, values.prompt, values.model) ?? null
+
+          setPipeline((prev) => ({
+            ...prev,
+            stage: "done",
+            synthesis,
+            editedPrompt: synthesis.prompt,
+            pendingPayload,
+          }))
         } catch (e) {
-          if (axios.isAxiosError(e)) {
-            const detail =
-              e.response?.data !== undefined
-                ? typeof e.response.data === "string"
-                  ? e.response.data
-                  : JSON.stringify(e.response.data)
-                : e.message
-            throw new Error(detail || "生成图片任务失败")
-          }
-          throw e
-        }
-      })
-      .then((data) => {
-        if (data) {
-          setResult(data)
-          const sourceUrls = getResultImageUrls(data)
-          if (sourceUrls.length > 0) {
-            setOssUpload({ status: "uploading" })
-            void runOssUpload(sourceUrls)
-          } else {
-            setOssUpload({ status: "idle" })
-          }
-        } else if (data === null) {
-          message.warning("返回数据格式无法展示为图片结果，请确认接口已按文档返回 data[].url")
+          if (pipelineAbortRef.current) return
+          const errMsg = e instanceof Error ? e.message : "优化流程出错"
+          setPipeline((prev) => ({ ...prev, stage: "error", error: errMsg }))
         }
       })
       .catch((e) => {
-        // 表单校验错误时，仅提示具体校验信息，不再视为系统错误
         if (e?.errorFields && Array.isArray(e.errorFields) && e.errorFields.length > 0) {
           const firstFieldError = e.errorFields[0]
           const firstErrorMsg =
             (firstFieldError?.errors && firstFieldError.errors[0]) || "请完善必填项信息"
           message.info(firstErrorMsg)
-          return
         }
-
-        console.error(e)
-        message.error(e instanceof Error ? e.message : "生成图片任务失败")
-      })
-      .finally(() => {
-        setIsLoading(false)
       })
   }
 
-  const { run: handleGenerateDebounce } = useDebounceFn(handleGenerate, {
+  const handlePipelineCancel = useCallback(() => {
+    pipelineAbortRef.current = true
+    setPipeline(INITIAL_PIPELINE)
+  }, [])
+
+  const handleConfirmGenerate = useCallback(async () => {
+    if (!pipeline.pendingPayload || !pipeline.formValues) return
+
+    setIsLoading(true)
+    const apiKey = process.env.NEXT_PUBLIC_ARK_API_KEY
+    if (!apiKey) {
+      message.error("未配置环境变量 NEXT_PUBLIC_ARK_API_KEY")
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const finalPayload: DoubaoImageGen.GenerationsRequest = {
+        ...pipeline.pendingPayload,
+        prompt: pipeline.editedPrompt || pipeline.pendingPayload.prompt,
+      }
+      const rawResponse = await doubaoImageGenerations(finalPayload, apiKey)
+      const raw = rawResponse as unknown as Record<string, unknown>
+      const data =
+        parseImageGenResponse(raw, finalPayload.prompt, pipeline.formValues.model) ?? null
+
+      if (data) {
+        setResult(data)
+        const sourceUrls = getResultImageUrls(data)
+        if (sourceUrls.length > 0) {
+          setOssUpload({ status: "uploading" })
+          void runOssUpload(sourceUrls)
+        } else {
+          setOssUpload({ status: "idle" })
+        }
+      } else {
+        message.warning("返回数据格式无法展示为图片结果，请确认接口已按文档返回 data[].url")
+      }
+
+      setPipeline(INITIAL_PIPELINE)
+    } catch (e) {
+      if (axios.isAxiosError(e)) {
+        const detail =
+          e.response?.data !== undefined
+            ? typeof e.response.data === "string"
+              ? e.response.data
+              : JSON.stringify(e.response.data)
+            : e.message
+        message.error(detail || "生成图片任务失败")
+      } else {
+        message.error(e instanceof Error ? e.message : "生成图片任务失败")
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }, [pipeline, message, runOssUpload])
+
+  const renderStepResult = useCallback(
+    (stepKey: "semantic" | "assets" | "synthesis") => {
+      if (stepKey === "semantic" && pipeline.semantic) {
+        const dims = ["subject", "equipment", "scene", "style"] as const
+        const hasAny = dims.some((d) => pipeline.semantic![d])
+        return (
+          <div className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg bg-default-bg-color px-3 py-2">
+            {hasAny ? (
+              dims.map((dim) => (
+                <div key={dim} className="text-sm">
+                  <span className="text-assistant-text-color">{SEMANTIC_DIM_LABELS[dim]}:</span>{" "}
+                  <span className="text-block-title-color">{pipeline.semantic![dim] ?? "—"}</span>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-2 text-sm text-assistant-text-color">
+                未解析到明确维度信息
+              </div>
+            )}
+          </div>
+        )
+      }
+      if (stepKey === "assets" && pipeline.assets) {
+        const matched = (["subject", "equipment", "scene", "style"] as const)
+          .map((k) => pipeline.assets![k])
+          .filter((a): a is PromptEngineering.AssetReference => !!a?.matched)
+        return (
+          <div className="mt-1.5 rounded-lg bg-default-bg-color px-3 py-2">
+            {matched.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {matched.map((a, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#f0fdf4] px-2.5 py-0.5 text-xs text-[#15803d] dark:bg-[#052e16] dark:text-[#4ade80]"
+                  >
+                    {a.keyword}
+                    {a.description && (
+                      <span className="text-assistant-text-color">· {a.description}</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="text-sm text-assistant-text-color">未匹配到关联资产</span>
+            )}
+          </div>
+        )
+      }
+      if (stepKey === "synthesis" && pipeline.synthesis) {
+        return (
+          <div className="mt-1.5 rounded-lg bg-default-bg-color px-3 py-2 text-sm leading-relaxed text-block-title-color">
+            {pipeline.synthesis.prompt}
+          </div>
+        )
+      }
+      return null
+    },
+    [pipeline.semantic, pipeline.assets, pipeline.synthesis],
+  )
+
+  const { run: handleOptimizeDebounce } = useDebounceFn(handleOptimize, {
     wait: 350,
     leading: true,
     trailing: false,
@@ -356,7 +546,7 @@ export default function Page() {
   }
 
   const handleRegenerate = () => {
-    handleGenerateDebounce()
+    handleOptimizeDebounce()
   }
 
   const imageUploaderProps: ImageUploaderProps = useMemo(
@@ -499,10 +689,11 @@ export default function Page() {
             {/* 生成按钮 */}
             <GradientButton
               gradient="primary"
-              onClick={handleGenerateDebounce}
+              onClick={handleOptimizeDebounce}
               icon={<IconFont type="icon-ai" />}
               block
               loading={isLoading}
+              disabled={pipeline.open}
             >
               立即生成
             </GradientButton>
@@ -657,6 +848,151 @@ export default function Page() {
             )}
           </section>
         </Form>
+
+        {/* 提示词智能优化弹窗 */}
+        <Modal
+          open={pipeline.open}
+          onCancel={handlePipelineCancel}
+          footer={null}
+          width={680}
+          title={null}
+          maskClosable={false}
+          destroyOnClose
+          centered
+          classNames={{ body: "!pt-0" }}
+        >
+          <div className="flex flex-col">
+            {/* 标题区 */}
+            <div className="mb-5 flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-[#c064f9] to-[#eb5cac]">
+                <IconFont type="icon-ai" className="text-lg text-white" />
+              </div>
+              <div>
+                <div className="text-base font-semibold text-block-title-color">
+                  提示词智能优化
+                </div>
+                <div className="text-xs text-assistant-text-color">
+                  AI 自动解析、匹配资产并生成高质量英文提示词
+                </div>
+              </div>
+            </div>
+
+            {/* 原始描述 */}
+            {pipeline.userPrompt && (
+              <div className="mb-5 rounded-xl border border-line-color bg-default-bg-color px-4 py-3">
+                <div className="mb-1 text-xs font-medium text-assistant-text-color">原始描述</div>
+                <div className="text-sm text-block-title-color">{pipeline.userPrompt}</div>
+              </div>
+            )}
+
+            {/* 流程步骤 */}
+            <div className="mb-2">
+              {PIPELINE_STEPS.map((step, idx) => {
+                const status = getPipelineStepStatus(step.key, pipeline)
+                const isLast = idx === PIPELINE_STEPS.length - 1
+                return (
+                  <div key={step.key} className="flex gap-3">
+                    {/* 左侧指示器 + 连接线 */}
+                    <div className="flex flex-col items-center">
+                      <div
+                        className={cn(
+                          "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium transition-all duration-300",
+                          status === "done" && "bg-[#22c55e] text-white",
+                          status === "active" &&
+                            "border-2 border-[#3b82f6] text-[#3b82f6] shadow-[0_0_0_3px_rgba(59,130,246,0.15)]",
+                          status === "error" && "bg-[#ef4444] text-white",
+                          status === "pending" &&
+                            "border-2 border-gray-300 text-gray-400 dark:border-gray-600 dark:text-gray-500",
+                        )}
+                      >
+                        {status === "done" && <CheckOutlined style={{ fontSize: 12 }} />}
+                        {status === "active" && <LoadingOutlined style={{ fontSize: 12 }} />}
+                        {status === "error" && <CloseOutlined style={{ fontSize: 12 }} />}
+                        {status === "pending" && <span>{idx + 1}</span>}
+                      </div>
+                      {!isLast && (
+                        <div
+                          className={cn(
+                            "w-0.5 min-h-[20px] flex-1 transition-colors duration-300",
+                            status === "done"
+                              ? "bg-[#22c55e]"
+                              : "bg-gray-200 dark:bg-gray-700",
+                          )}
+                        />
+                      )}
+                    </div>
+
+                    {/* 右侧内容 */}
+                    <div className={cn("flex-1 pb-4", isLast && "pb-0")}>
+                      <div className="flex h-7 items-center gap-2">
+                        <span
+                          className={cn(
+                            "text-sm font-medium transition-colors",
+                            status === "active" && "text-[#3b82f6]",
+                            status === "done" && "text-block-title-color",
+                            status === "error" && "text-[#ef4444]",
+                            status === "pending" && "text-assistant-text-color",
+                          )}
+                        >
+                          {step.label}
+                        </span>
+                        {status === "active" && (
+                          <span className="text-xs text-assistant-text-color">{step.desc}</span>
+                        )}
+                      </div>
+                      {status === "done" && renderStepResult(step.key)}
+                      {status === "error" && pipeline.error && (
+                        <div className="mt-1 rounded-lg bg-[#fef2f2] px-3 py-2 text-sm text-[#ef4444] dark:bg-[#450a0a]">
+                          {pipeline.error}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* 优化完成：可编辑提示词 */}
+            {pipeline.stage === "done" && (
+              <div className="mt-2 rounded-xl border border-line-color bg-default-bg-color p-4">
+                <div className="mb-2 text-sm font-medium text-block-title-color">
+                  优化后的提示词
+                  <span className="ml-2 text-xs font-normal text-assistant-text-color">
+                    可直接编辑修改
+                  </span>
+                </div>
+                <textarea
+                  className="w-full resize-none rounded-lg border border-line-color bg-card-bg-color p-3 text-sm leading-relaxed text-block-title-color outline-none transition-colors focus:border-[#3b82f6]"
+                  rows={4}
+                  value={pipeline.editedPrompt}
+                  onChange={(e) =>
+                    setPipeline((prev) => ({ ...prev, editedPrompt: e.target.value }))
+                  }
+                />
+              </div>
+            )}
+
+            {/* 底部按钮 */}
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={handlePipelineCancel}
+                className="h-9 rounded-lg border border-line-color bg-card-bg-color px-5 text-sm text-assistant-text-color transition-colors hover:bg-default-bg-color"
+              >
+                取消
+              </button>
+              <GradientButton
+                gradient="primary"
+                onClick={handleConfirmGenerate}
+                loading={isLoading}
+                disabled={pipeline.stage !== "done" || !pipeline.editedPrompt.trim()}
+                icon={<IconFont type="icon-ai" />}
+              >
+                确认生成
+              </GradientButton>
+            </div>
+          </div>
+        </Modal>
       </div>
     </div>
   )
