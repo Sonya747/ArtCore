@@ -48,6 +48,33 @@ export async function GET(req: Request) {
   }
 }
 
+export async function POST(req: Request) {
+  try {
+    const prisma = getAssetsPrisma()
+    const body = await req.json()
+
+    const isFinal = body.status === 'failed' || body.status === 'success'
+    const task = await prisma.generationTask.create({
+      data: {
+        raw_prompt: body.raw_prompt,
+        final_prompt: body.final_prompt ?? null,
+        model_name: body.model_name ?? null,
+        status: body.status ?? 'pending',
+        image_size: body.image_size ?? null,
+        request_params: body.request_params ?? null,
+        error_message: body.error_message ?? null,
+        finished_at: isFinal ? new Date() : null,
+      },
+    })
+
+    return NextResponse.json({ id: task.id }, { status: 201 })
+  } catch (e) {
+    console.error('[api/tasks POST]', e)
+    const msg = e instanceof Error ? e.message : '创建任务失败'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
+}
+
 export async function DELETE(req: Request) {
   try {
     const prisma = getAssetsPrisma()

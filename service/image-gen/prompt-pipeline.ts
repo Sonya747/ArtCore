@@ -4,10 +4,10 @@ import { retrieveAssetContext } from "./asset-rag"
 
 export { retrieveAssetContext } from "./asset-rag"
 
-/** 语义解析用的 LLM 模型（可按需切换） */
-const SEMANTIC_MODEL = "doubao-pro-32k-240615"
+/** 语义解析用的 LLM 模型 */
+const SEMANTIC_MODEL = "doubao-seed-2-0-lite-260215"
 /** Prompt 合成用的 LLM 模型 */
-const SYNTHESIS_MODEL = "doubao-pro-32k-240615"
+const SYNTHESIS_MODEL = "doubao-seed-2-0-lite-260215"
 
 const SEMANTIC_KEYS: Array<keyof PromptEngineering.SemanticParseResult> = [
   "subject",

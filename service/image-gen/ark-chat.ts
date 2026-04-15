@@ -13,7 +13,6 @@ function normalizeBearer(authorization: string): string {
 /**
  * 火山方舟 Chat Completions 通用调用
  *
- * 同时支持普通文本生成和结构化输出（response_format: json_schema）。
  */
 export async function arkChatCompletions(
   body: ArkChat.CompletionsRequest,

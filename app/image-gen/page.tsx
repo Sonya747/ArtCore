@@ -13,10 +13,11 @@ import PromptInput from "@/components/prompt-input"
 import {
   doubaoImageGenerations,
   parseSemanticWithLLM,
-  retrieveAssetContext,
+  retrieveAssetContextByApi,
   synthesizePromptWithLLM,
 } from "@/service/image-gen"
 import type { PromptEngineering, DoubaoImageGen } from "@/service/image-gen"
+import { tasksService } from "@/service/tasks"
 import { cn } from "@/utils/cn"
 import { ls } from "@/utils/localStorage"
 import { uploadRemoteImageUrlsToQiniu } from "@/utils/qiniu-upload"
@@ -368,7 +369,7 @@ export default function Page() {
           if (pipelineAbortRef.current) return
           setPipeline((prev) => ({ ...prev, stage: "assets", semantic }))
 
-          const assets = await retrieveAssetContext(semantic)
+          const assets = await retrieveAssetContextByApi(semantic)
           if (pipelineAbortRef.current) return
           setPipeline((prev) => ({ ...prev, stage: "synthesis", assets }))
 
@@ -406,6 +407,14 @@ export default function Page() {
           if (pipelineAbortRef.current) return
           const errMsg = e instanceof Error ? e.message : "优化流程出错"
           setPipeline((prev) => ({ ...prev, stage: "error", error: errMsg }))
+
+          void tasksService.createGenerationTask({
+            raw_prompt: values.prompt,
+            model_name: values.model,
+            status: "failed",
+            error_message: `[prompt-pipeline] ${errMsg}`,
+            image_size: values.doubaoParams?.size ?? "2K",
+          })
         }
       })
       .catch((e) => {

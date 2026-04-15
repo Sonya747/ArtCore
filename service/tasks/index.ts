@@ -21,6 +21,16 @@ export const tasksService = {
     return requestJson<TASKS.ListGenerationTasksResponse>(`/api/tasks?${query}`)
   },
 
+  async createGenerationTask(
+    params: TASKS.CreateGenerationTaskParams,
+  ): Promise<TASKS.CreateGenerationTaskResponse> {
+    return requestJson<TASKS.CreateGenerationTaskResponse>('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    })
+  },
+
   async deleteGenerationTasks(
     params: TASKS.DeleteGenerationTasksParams,
   ): Promise<TASKS.DeleteGenerationTasksResponse> {
