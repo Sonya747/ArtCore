@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import type { Prisma } from '@prisma/client'
 import { getAssetsPrisma } from '@/lib/prisma-assets-db'
 import { TaskType } from '@/service/typing'
 
@@ -94,23 +93,39 @@ export async function POST(req: Request) {
       total = Number(countRows[0]?.total ?? BigInt(0))
       rows = filteredRows
     } else {
-      const where: Prisma.AssetWhereInput = {}
-      if (keyword) {
-        where.OR = [
-          { name: { contains: keyword, mode: 'insensitive' } },
-          { description: { contains: keyword, mode: 'insensitive' } },
-        ]
-      }
-      const [count, foundRows] = await Promise.all([
-        prisma.asset.count({ where }),
-        prisma.asset.findMany({
-          where,
-          orderBy: { created_at: 'desc' },
-          skip: page * pageSize,
-          take: pageSize,
-        }),
+      const [countRows, foundRows] = await Promise.all([
+        keyword
+          ? prisma.$queryRaw<Array<{ total: bigint }>>`
+              SELECT COUNT(*)::bigint AS total
+              FROM assets a
+              WHERE
+                COALESCE(a.name, '') ILIKE ${`%${keyword}%`}
+                OR COALESCE(a.description, '') ILIKE ${`%${keyword}%`}
+            `
+          : prisma.$queryRaw<Array<{ total: bigint }>>`
+              SELECT COUNT(*)::bigint AS total
+              FROM assets a
+            `,
+        keyword
+          ? prisma.$queryRaw<typeof rows>`
+              SELECT a.id::text, a.name, a.type, a.description, a.preview_url, a.created_by::text, a.created_at
+              FROM assets a
+              WHERE
+                COALESCE(a.name, '') ILIKE ${`%${keyword}%`}
+                OR COALESCE(a.description, '') ILIKE ${`%${keyword}%`}
+              ORDER BY a.created_at DESC
+              LIMIT ${pageSize}
+              OFFSET ${page * pageSize}
+            `
+          : prisma.$queryRaw<typeof rows>`
+              SELECT a.id::text, a.name, a.type, a.description, a.preview_url, a.created_by::text, a.created_at
+              FROM assets a
+              ORDER BY a.created_at DESC
+              LIMIT ${pageSize}
+              OFFSET ${page * pageSize}
+            `,
       ])
-      total = count
+      total = Number(countRows[0]?.total ?? BigInt(0))
       rows = foundRows
     }
 

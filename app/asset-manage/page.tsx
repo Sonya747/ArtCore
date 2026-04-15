@@ -17,7 +17,19 @@ export default function Page() {
         <Breadcrumb
           className="text-xl font-medium"
           items={[
-            { title: "空间资产" },
+            {
+              title: "空间资产",
+              ...(albumName
+                ? {
+                    href: "#",
+                    onClick: (e: React.MouseEvent) => {
+                      e.preventDefault()
+                      setAlbumId(undefined)
+                      setAlbumName(undefined)
+                    },
+                  }
+                : {}),
+            },
             ...(albumName ? [{ title: albumName }] : []),
           ]}
         />
