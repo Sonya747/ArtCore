@@ -7,3 +7,4 @@ export {
   synthesizePromptWithLLM,
   runPromptEngineeringPipeline,
 } from "./prompt-pipeline"
+export { retrieveAssetContextByApi } from "./rag-api"
