@@ -1,17 +1,14 @@
-import { ls } from './localStorage'
-
-//TODO 修改
-// 使用idaas登录
-export const getIdaasLoginUrl = () => {
-  const target_url = btoa(window.location.pathname + window.location.search)
-  return `${process.env.PUBLIC_SSO_URL}&redirect_uri=${location.origin}/login&target_url=${target_url}`
-}
+import { logoutApi } from '@/service/auth'
 
 export const login = () => {
-  window.location.href = getIdaasLoginUrl()
+  window.location.href = '/login'
 }
 
-export const logout = () => {
-  ls.remove('id_token')
-  window.location.href = `${window.location.origin}/login`
+export const logout = async () => {
+  try {
+    await logoutApi()
+  } catch {
+    // ignore
+  }
+  window.location.href = '/login'
 }

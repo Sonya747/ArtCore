@@ -5,9 +5,9 @@ import {
     CrownOutlined,
     DeleteOutlined,
     EditOutlined,
-    MailOutlined,
+    LockOutlined,
     PlusOutlined,
-    SearchOutlined,
+    SmileOutlined,
     TeamOutlined,
     UserOutlined,
 } from "@ant-design/icons"
@@ -15,26 +15,20 @@ import {
     App,
     Avatar,
     Button,
-    Checkbox,
-    Empty,
+    Form,
     Input,
-    List,
     Modal,
     Select,
     Space,
-    Spin,
     Table,
     Tag,
     Tooltip,
-    Typography,
 } from "antd"
 import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
 import { useCallback, useEffect, useState } from "react"
 import { API } from "@/service"
 import type { MEMBER } from "@/service/member/typing"
-
-const { Text } = Typography
 
 const ROLE_LABEL: Record<MEMBER.MemberRole, string> = {
     admin: "管理员",
@@ -52,41 +46,34 @@ export default function MemberManagePage() {
     const [members, setMembers] = useState<MEMBER.WorkspaceMember[]>([])
     const [roleModalOpen, setRoleModalOpen] = useState(false)
     const [addModalOpen, setAddModalOpen] = useState(false)
+    const [addLoading, setAddLoading] = useState(false)
     const [editingMember, setEditingMember] = useState<MEMBER.WorkspaceMember | null>(null)
     const [nextRole, setNextRole] = useState<MEMBER.MemberRole>("member")
-    const [inviteKeyword, setInviteKeyword] = useState("")
-    const [searching, setSearching] = useState(false)
-    const [hasSearched, setHasSearched] = useState(false)
-    const [searchHits, setSearchHits] = useState<MEMBER.OrgUser[]>([])
-    const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
-
-    const resetAddMemberModal = () => {
-        setInviteKeyword("")
-        setSearching(false)
-        setHasSearched(false)
-        setSearchHits([])
-        setSelectedUserIds([])
-    }
+    const [addForm] = Form.useForm()
 
     const openAddMemberModal = () => {
-        resetAddMemberModal()
+        addForm.resetFields()
         setAddModalOpen(true)
     }
 
-    const runUserSearch = async () => {
-        const keyword = inviteKeyword.trim()
-        if (!keyword) {
-            message.warning("请输入邮箱或姓名")
-            return
-        }
-        setSearching(true)
-        setHasSearched(true)
+    const handleCreateMember = async () => {
         try {
-            const res = await API.member.searchUsers({ keyword })
-            setSearchHits(res.results)
-            setSelectedUserIds([])
+            const values = await addForm.validateFields()
+            setAddLoading(true)
+            const res = await API.member.createMember({
+                username: values.username,
+                password: values.password,
+                display_name: values.display_name || undefined,
+                role: values.role,
+            })
+            message.success(res.message)
+            setAddModalOpen(false)
+            addForm.resetFields()
+            loadMembers()
+        } catch (e) {
+            if (e instanceof Error) message.error(e.message)
         } finally {
-            setSearching(false)
+            setAddLoading(false)
         }
     }
 
@@ -139,27 +126,6 @@ export default function MemberManagePage() {
                 void loadMembers()
             },
         })
-    }
-
-    const handleAddMembers = async () => {
-        if (!selectedUserIds.length) {
-            message.warning("请先搜索并勾选要添加的成员")
-            return
-        }
-        const res = await API.member.inviteUsers({
-            user_ids: selectedUserIds,
-            role: "member",
-        })
-        message.success(res.message)
-        setAddModalOpen(false)
-        resetAddMemberModal()
-        loadMembers()
-    }
-
-    const toggleSelectedUser = (userId: string, checked: boolean) => {
-        setSelectedUserIds((prev) =>
-            checked ? [...prev, userId] : prev.filter((id) => id !== userId)
-        )
     }
 
     const columns: ColumnsType<MEMBER.WorkspaceMember> = [
@@ -350,7 +316,7 @@ export default function MemberManagePage() {
                 />
             </Modal>
 
-            {/* Add member modal */}
+            {/* Create member modal */}
             <Modal
                 title={
                     <div className="flex items-center gap-2">
@@ -359,97 +325,95 @@ export default function MemberManagePage() {
                     </div>
                 }
                 open={addModalOpen}
-                onOk={() => void handleAddMembers()}
-                okText={
-                    selectedUserIds.length > 0
-                        ? `添加 ${selectedUserIds.length} 位成员`
-                        : "添加"
-                }
-                okButtonProps={{ disabled: selectedUserIds.length === 0 }}
+                onOk={() => void handleCreateMember()}
+                okText="创建"
+                confirmLoading={addLoading}
                 onCancel={() => {
                     setAddModalOpen(false)
-                    resetAddMemberModal()
+                    addForm.resetFields()
                 }}
                 destroyOnHidden
-                width={520}
+                width={480}
             >
                 <p className="mb-4 text-sm text-assistant-text-color">
-                    输入邮箱或姓名搜索组织内的用户，勾选后添加到当前空间。
+                    创建一个新成员账号，该成员可以使用用户名和密码登录系统。
                 </p>
-                <Input.Search
-                    prefix={<SearchOutlined className="text-assistant-text-color" />}
-                    placeholder="搜索邮箱或姓名…"
-                    value={inviteKeyword}
-                    onChange={(e) => setInviteKeyword(e.target.value)}
-                    onSearch={() => void runUserSearch()}
-                    loading={searching}
-                    allowClear
-                    enterButton="查询"
-                />
-                <div className="mt-4 min-h-[180px]">
-                    {searching ? (
-                        <div className="flex flex-col items-center justify-center gap-2 py-12">
-                            <Spin />
-                            <Text type="secondary" className="text-xs">
-                                搜索中…
-                            </Text>
-                        </div>
-                    ) : hasSearched && searchHits.length === 0 ? (
-                        <Empty
-                            className="py-8"
-                            image={Empty.PRESENTED_IMAGE_SIMPLE}
-                            description="未找到可邀请的用户"
+                <Form
+                    form={addForm}
+                    layout="vertical"
+                    requiredMark={false}
+                    initialValues={{ role: "member" }}
+                >
+                    <Form.Item
+                        name="username"
+                        label="用户名"
+                        rules={[
+                            { required: true, message: "请输入用户名" },
+                            { min: 2, message: "用户名至少 2 个字符" },
+                            { max: 50, message: "用户名最多 50 个字符" },
+                        ]}
+                    >
+                        <Input
+                            prefix={<UserOutlined className="text-assistant-text-color" />}
+                            placeholder="输入用户名，用于登录"
+                            autoComplete="off"
                         />
-                    ) : searchHits.length > 0 ? (
-                        <>
-                            <div className="mb-2 text-xs text-assistant-text-color">
-                                找到 {searchHits.length} 位用户
-                            </div>
-                            <List
-                                className="max-h-[280px] overflow-y-auto rounded-xl border border-line-color"
-                                dataSource={searchHits}
-                                renderItem={(user) => (
-                                    <List.Item
-                                        className="cursor-pointer px-4! transition-colors hover:bg-default-bg-color"
-                                        onClick={() =>
-                                            toggleSelectedUser(
-                                                user.user_id,
-                                                !selectedUserIds.includes(user.user_id)
-                                            )
-                                        }
-                                    >
-                                        <div className="flex w-full items-center gap-3">
-                                            <Checkbox
-                                                checked={selectedUserIds.includes(user.user_id)}
-                                                onChange={(e) =>
-                                                    toggleSelectedUser(user.user_id, e.target.checked)
-                                                }
-                                                onClick={(e) => e.stopPropagation()}
-                                            />
-                                            <Avatar
-                                                size={36}
-                                                src={user.avatar_url ?? undefined}
-                                                icon={!user.avatar_url ? <UserOutlined /> : undefined}
-                                                className={!user.avatar_url ? "bg-secondary-color/20 text-primary-color" : ""}
-                                            >
-                                                {!user.avatar_url ? user.name.slice(0, 1) : null}
-                                            </Avatar>
-                                            <div className="flex flex-1 flex-col gap-0.5">
-                                                <span className="text-sm font-medium text-block-title-color">
-                                                    {user.name}
-                                                </span>
-                                                <span className="text-xs text-assistant-text-color">
-                                                    <MailOutlined className="mr-1" />
-                                                    {user.email}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </List.Item>
-                                )}
-                            />
-                        </>
-                    ) : null}
-                </div>
+                    </Form.Item>
+
+                    <Form.Item
+                        name="display_name"
+                        label="昵称"
+                    >
+                        <Input
+                            prefix={<SmileOutlined className="text-assistant-text-color" />}
+                            placeholder="选填，不填则与用户名相同"
+                            autoComplete="off"
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="password"
+                        label="密码"
+                        rules={[
+                            { required: true, message: "请输入密码" },
+                            { min: 6, message: "密码至少 6 个字符" },
+                        ]}
+                    >
+                        <Input.Password
+                            prefix={<LockOutlined className="text-assistant-text-color" />}
+                            placeholder="至少 6 个字符"
+                            autoComplete="new-password"
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="role"
+                        label="角色"
+                    >
+                        <Select
+                            options={[
+                                {
+                                    value: "member",
+                                    label: (
+                                        <Space>
+                                            <UserOutlined className="text-assistant-text-color" />
+                                            普通成员
+                                        </Space>
+                                    ),
+                                },
+                                {
+                                    value: "admin",
+                                    label: (
+                                        <Space>
+                                            <CrownOutlined className="text-primary-color" />
+                                            管理员
+                                        </Space>
+                                    ),
+                                },
+                            ]}
+                        />
+                    </Form.Item>
+                </Form>
             </Modal>
         </div>
     )

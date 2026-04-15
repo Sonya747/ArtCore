@@ -81,6 +81,13 @@ export namespace MEMBER {
     role?: MemberRole
   }
 
+  export interface CreateMemberParams {
+    username: string
+    password: string
+    display_name?: string
+    role?: MemberRole
+  }
+
   export interface ApiMessage {
     message: string
   }

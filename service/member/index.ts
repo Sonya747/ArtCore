@@ -64,6 +64,14 @@ export const memberService = {
     })
   },
 
+  async createMember(params: MEMBER.CreateMemberParams): Promise<MEMBER.ApiMessage> {
+    return requestJson<MEMBER.ApiMessage>('/api/members', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create_member', ...params }),
+    })
+  },
+
   roleHasPermission(role: MEMBER.MemberRole, permission: MEMBER.WorkspacePermission): boolean {
     return MEMBER.ROLE_PERMISSIONS[role].includes(permission)
   },

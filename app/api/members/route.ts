@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getAssetsPrisma } from '@/lib/prisma-assets-db'
+import { hashPassword } from '@/lib/auth'
 
 export async function GET(req: Request) {
   try {
@@ -90,6 +91,36 @@ export async function POST(req: Request) {
       const userId: string = body.user_id
       await prisma.user.delete({ where: { id: userId } })
       return NextResponse.json({ message: '成员已移除' })
+    }
+
+    if (action === 'create_member') {
+      const username: string = (body.username ?? '').trim()
+      const password: string = body.password ?? ''
+      const display_name: string = (body.display_name ?? '').trim()
+      const role: string = body.role ?? 'member'
+
+      if (!username || username.length < 2) {
+        return NextResponse.json({ error: '用户名至少需要 2 个字符' }, { status: 400 })
+      }
+      if (!password || password.length < 6) {
+        return NextResponse.json({ error: '密码至少需要 6 个字符' }, { status: 400 })
+      }
+
+      const existing = await prisma.user.findUnique({ where: { username } })
+      if (existing) {
+        return NextResponse.json({ error: '该用户名已存在' }, { status: 409 })
+      }
+
+      const password_hash = await hashPassword(password)
+      await prisma.user.create({
+        data: {
+          username,
+          password_hash,
+          display_name: display_name || username,
+          role,
+        },
+      })
+      return NextResponse.json({ message: `成员「${display_name || username}」已创建` })
     }
 
     if (action === 'search') {
