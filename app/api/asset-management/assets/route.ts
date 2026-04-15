@@ -152,3 +152,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const body = (await req.json()) as { asset_ids?: string[] }
+    const assetIds = body.asset_ids
+    if (!Array.isArray(assetIds) || assetIds.length === 0) {
+      return NextResponse.json({ error: 'asset_ids 不能为空' }, { status: 400 })
+    }
+
+    const prisma = getAssetsPrisma()
+    const uuids = assetIds.map((id) => id.trim()).filter(Boolean)
+
+    await prisma.$executeRawUnsafe(
+      `DELETE FROM assets WHERE id = ANY($1::uuid[])`,
+      uuids,
+    )
+
+    return NextResponse.json({ ok: true })
+  } catch (e) {
+    const message = e instanceof Error ? e.message : '删除资产失败'
+    console.error('[asset-management/assets][DELETE]', e)
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+}

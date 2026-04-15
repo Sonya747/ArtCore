@@ -1,8 +1,6 @@
 import {
   FileTextOutlined,
   LogoutOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
   MessageOutlined,
   MoonOutlined,
   ReadOutlined,
@@ -13,10 +11,9 @@ import {
 import type { MenuProps } from 'antd'
 import { Avatar, Dropdown, Tag, Tooltip } from 'antd'
 import type React from 'react'
-import { useShallow } from 'zustand/shallow'
 import { useTheme } from '@/store/theme'
 import { login, logout } from '@/utils/login'
-// import WorkspaceSwitch from './workspace-switch'
+import { useGlobalStore } from '@/store/global'
 
 // 外部链接配置
 const EXTERNAL_LINKS = {
@@ -30,11 +27,7 @@ interface SidebarFooterProps {
 }
 
 const SidebarFooter: React.FC<SidebarFooterProps> = ({ siderCollapsed }) => {
-  // const { userInfo } = useGlobalStore(
-  //   useShallow((state) => ({
-  //     userInfo: state.userInfo,
-  //   }))
-  // )
+  const userInfo = useGlobalStore((s) => s.userInfo)
   const { setTheme } = useTheme()
 
   const menuItems: MenuProps['items'] = [
@@ -135,8 +128,7 @@ const SidebarFooter: React.FC<SidebarFooterProps> = ({ siderCollapsed }) => {
           </Dropdown>
           {!siderCollapsed && (
             <span className='text-sm text-block-title-color truncate max-w-20'>
-              {/* {userInfo?.username || '用户'} */}
-              用户aaatodo
+              {userInfo?.display_name || userInfo?.username || '用户'}
             </span>
           )}
         </div>

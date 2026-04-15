@@ -1,9 +1,4 @@
 import type { ASSETS } from './typing'
-import { TaskStatus, TaskType } from '../typing'
-import { Workspace } from '../workspace/typing'
-
-const MOCK_ASSET_TYPES = ['character', 'weapon', 'scene', 'style'] as const
-const mockDelay = (ms = 200) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const requestJson = async <T>(input: RequestInfo, init?: RequestInit): Promise<T> => {
   const res = await fetch(input, init)
@@ -12,36 +7,6 @@ const requestJson = async <T>(input: RequestInfo, init?: RequestInit): Promise<T
     throw new Error(typeof data?.error === 'string' ? data.error : res.statusText || '请求失败')
   }
   return data as T
-}
-
-const createMockTask = (index: number): ASSETS.TaskDetail => {
-  const imageUrl = '/assets/icons/model/midjourney.webp'
-  const assetId = `asset_${index + 1}`
-  const now = new Date()
-  const catalogType = MOCK_ASSET_TYPES[index % MOCK_ASSET_TYPES.length]
-
-  const result: Workspace.ImageResult = {
-    images: [
-      {
-        asset_id: assetId,
-        url: imageUrl,
-        type: catalogType,
-        description: `示例资产说明：第 ${index + 1} 条`,
-        created_by: 'mock-user',
-        created_at: now.toISOString(),
-      },
-    ],
-    reference_images: [],
-  }
-
-  return {
-    request_id: `req_${index + 1}`,
-    status: TaskStatus.FINISHED,
-    task_type: TaskType.IMAGE,
-    result,
-    title: `示例作品 ${index + 1}`,
-    create_time: now.toISOString(),
-  } as ASSETS.TaskDetail
 }
 
 export const assetsService = {
@@ -82,34 +47,25 @@ export const assetsService = {
 
   async getAlbumDetail(
     params: ASSETS.GetAlbumDetailParams
-  ): Promise<ASSETS.TaskListResponse> {
-    await mockDelay()
-    const tasks = Array.from({ length: 12 }).map((_, idx) =>
-      createMockTask(idx + (params.page || 0) * 12)
-    )
-    return {
+  ): Promise<ASSETS.FetchAssetsResponse> {
+    return this.fetchAssets({
       page: params.page,
       page_size: params.page_size,
-      total_count: tasks.length,
-      has_more: false,
-      results: tasks,
-    }
+      keyword: params.keyword,
+      task_types: params.task_types,
+      album_id: params.album_id,
+    })
   },
 
   async getTaskDetailList(
     params: ASSETS.GetTaskDetailListParams
-  ): Promise<ASSETS.TaskListResponse> {
-    await mockDelay()
-    const tasks = Array.from({ length: 16 }).map((_, idx) =>
-      createMockTask(idx + (params.page || 0) * 16)
-    )
-    return {
+  ): Promise<ASSETS.FetchAssetsResponse> {
+    return this.fetchAssets({
       page: params.page,
       page_size: params.page_size,
-      total_count: tasks.length,
-      has_more: false,
-      results: tasks,
-    }
+      keyword: params.keyword,
+      task_types: params.task_types,
+    })
   },
 
   async getAssetAlbumIds(
@@ -147,8 +103,12 @@ export const assetsService = {
     })
   },
 
-  async deleteAssets(_params: ASSETS.DeleteAssetsParams): Promise<void> {
-    // TODO: 后端资产删除接口待接入
+  async deleteAssets(params: ASSETS.DeleteAssetsParams): Promise<void> {
+    await requestJson('/api/asset-management/assets', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    })
   },
 
   async fetchAssets(params: ASSETS.FetchAssetsParams): Promise<ASSETS.FetchAssetsResponse> {
