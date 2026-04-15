@@ -1,23 +1,24 @@
 export namespace TASKS {
-  export type GenerationTaskStatus = 'pending' | 'running' | 'success' | 'failed'
+  export type GenerationTaskStatus = 'pending' | 'processing' | 'success' | 'failed'
 
   export interface GenerationTask {
     id: string
-    user_id: string
-    input_params: Record<string, unknown>
-    model_label: string
-    workflow_name: string
+    user_id: string | null
+    raw_prompt: string
+    final_prompt: string | null
+    model_name: string | null
     status: GenerationTaskStatus
-    error_message?: string | null
+    image_size: string | null
+    request_params: Record<string, unknown> | null
+    error_message: string | null
     created_at: string
-    started_at?: string | null
-    finished_at?: string | null
+    finished_at: string | null
   }
 
   export interface ListGenerationTasksParams {
-    user_id: string
     page?: number
     page_size?: number
+    status?: GenerationTaskStatus
   }
 
   export interface ListGenerationTasksResponse {
@@ -35,4 +36,3 @@ export namespace TASKS {
     message: string
   }
 }
-

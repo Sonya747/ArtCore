@@ -7,20 +7,19 @@ import dayjs from "dayjs"
 import { useCallback, useEffect, useState } from "react"
 import { API } from "@/service"
 import type { TASKS } from "@/service/tasks/typing"
-import { MOCK_USER_ID } from "@/service/tasks"
 
 const { Link: TextLink, Text } = Typography
 
 const STATUS_LABEL: Record<TASKS.GenerationTaskStatus, string> = {
     pending: "待执行",
-    running: "运行中",
+    processing: "处理中",
     success: "成功",
     failed: "失败",
 }
 
 const STATUS_COLOR: Record<TASKS.GenerationTaskStatus, string> = {
     pending: "default",
-    running: "blue",
+    processing: "blue",
     success: "green",
     failed: "red",
 }
@@ -34,7 +33,6 @@ export default function TaskManagePage() {
         setLoading(true)
         try {
             const res = await API.tasks.listGenerationTasks({
-                user_id: MOCK_USER_ID,
                 page: 1,
                 page_size: 100,
             })
@@ -49,7 +47,7 @@ export default function TaskManagePage() {
     }, [loadTasks])
 
     const handleReuse = (_record: TASKS.GenerationTask) => {
-        // 复用操作暂未实现（按需求保持空函数）
+        // 复用操作暂未实现
     }
 
     const handleDelete = (record: TASKS.GenerationTask) => {
@@ -79,70 +77,36 @@ export default function TaskManagePage() {
             ),
         },
         {
-            title: "用户ID",
-            dataIndex: "user_id",
-            key: "user_id",
-            width: 160,
-            render: (user_id: string) => (
-                <span className="max-w-[140px] truncate inline-block" title={user_id}>
-                    {user_id}
-                </span>
+            title: "原始提示词",
+            dataIndex: "raw_prompt",
+            key: "raw_prompt",
+            width: 280,
+            render: (text: string) => (
+                <Tooltip title={text}>
+                    <span className="max-w-[260px] truncate inline-block">{text}</span>
+                </Tooltip>
             ),
         },
         {
-            title: "提示词",
-            key: "prompt",
+            title: "最终提示词",
+            dataIndex: "final_prompt",
+            key: "final_prompt",
             width: 280,
-            render: (_, record) => {
-                const promptValue = record.input_params?.prompt
-                const prompt = typeof promptValue === "string" ? promptValue : "-"
-                return (
-                    <Tooltip title={prompt}>
-                        <span className="max-w-[260px] truncate inline-block" title={prompt}>
-                            {prompt}
-                        </span>
+            render: (text: string | null) =>
+                text ? (
+                    <Tooltip title={text}>
+                        <span className="max-w-[260px] truncate inline-block">{text}</span>
                     </Tooltip>
-                )
-            },
-        },
-        {
-            title: "输入参数",
-            dataIndex: "input_params",
-            key: "input_params",
-            width: 320,
-            render: (input_params: TASKS.GenerationTask["input_params"]) => {
-                const { prompt: _prompt, ...rest } = input_params
-                const preview = Object.keys(rest).length ? JSON.stringify(rest) : "-"
-                return (
-                    <Tooltip title={<pre className="m-0 whitespace-pre-wrap">{preview}</pre>}>
-                        <span className="max-w-[300px] truncate inline-block font-mono text-xs" title={preview}>
-                            {preview}
-                        </span>
-                    </Tooltip>
-                )
-            },
+                ) : (
+                    <Text type="secondary">-</Text>
+                ),
         },
         {
             title: "模型",
-            dataIndex: "model_label",
-            key: "model_label",
-            width: 120,
-            render: (model_label: string) => (
-                <span className="max-w-[110px] truncate inline-block" title={model_label}>
-                    {model_label}
-                </span>
-            ),
-        },
-        {
-            title: "工作流",
-            dataIndex: "workflow_name",
-            key: "workflow_name",
-            width: 240,
-            render: (workflow_name: string) => (
-                <span className="max-w-[220px] truncate inline-block" title={workflow_name}>
-                    {workflow_name}
-                </span>
-            ),
+            dataIndex: "model_name",
+            key: "model_name",
+            width: 140,
+            render: (name: string | null) => name ?? <Text type="secondary">-</Text>,
         },
         {
             title: "状态",
@@ -161,9 +125,7 @@ export default function TaskManagePage() {
             render: (error_message?: string | null) =>
                 error_message ? (
                     <Tooltip title={error_message}>
-                        <span className="max-w-[240px] truncate inline-block" title={error_message}>
-                            {error_message}
-                        </span>
+                        <span className="max-w-[240px] truncate inline-block">{error_message}</span>
                     </Tooltip>
                 ) : (
                     <Text type="secondary">-</Text>
@@ -180,14 +142,6 @@ export default function TaskManagePage() {
                     <span>{dayjs(created_at).format("MM/DD/YYYY HH:mm:ss")}</span>
                 </Space>
             ),
-        },
-        {
-            title: "开始时间",
-            dataIndex: "started_at",
-            key: "started_at",
-            width: 170,
-            render: (started_at?: string | null) =>
-                started_at ? dayjs(started_at).format("MM/DD/YYYY HH:mm:ss") : <Text type="secondary">-</Text>,
         },
         {
             title: "完成时间",
@@ -228,7 +182,7 @@ export default function TaskManagePage() {
                     columns={columns}
                     dataSource={tasks}
                     size="middle"
-                    scroll={{ x: 2100 }}
+                    scroll={{ x: 1800 }}
                     pagination={{
                         pageSize: 10,
                         total: tasks.length,

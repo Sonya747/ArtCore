@@ -2,7 +2,6 @@
 
 import {
     CalendarOutlined,
-    DeleteOutlined,
     MailOutlined,
     PlusOutlined,
     UserOutlined,
@@ -27,7 +26,6 @@ import dayjs from "dayjs"
 import { useCallback, useEffect, useState } from "react"
 import { API } from "@/service"
 import type { MEMBER } from "@/service/member/typing"
-import { MOCK_WORKSPACE_ID } from "@/service/member"
 
 const { Link: TextLink, Text } = Typography
 
@@ -72,10 +70,7 @@ export default function MemberManagePage() {
         setSearching(true)
         setHasSearched(true)
         try {
-            const res = await API.member.searchUsers({
-                keyword,
-                workspace_id: MOCK_WORKSPACE_ID,
-            })
+            const res = await API.member.searchUsers({ keyword })
             setSearchHits(res.results)
             setSelectedUserIds([])
         } finally {
@@ -87,7 +82,6 @@ export default function MemberManagePage() {
         setLoading(true)
         try {
             const res = await API.member.listWorkspaceMembers({
-                workspace_id: MOCK_WORKSPACE_ID,
                 page: 1,
                 page_size: 100,
             })
@@ -110,7 +104,6 @@ export default function MemberManagePage() {
     const handleConfirmRole = async () => {
         if (!editingMember) return
         await API.member.updateMemberRole({
-            workspace_id: MOCK_WORKSPACE_ID,
             user_id: editingMember.user_id,
             role: nextRole,
         })
@@ -123,12 +116,11 @@ export default function MemberManagePage() {
     const handleRemove = (record: MEMBER.WorkspaceMember) => {
         modal.confirm({
             title: "移除成员",
-            content: `确定将「${record.name}」移出当前工作空间？`,
+            content: `确定将「${record.name}」移出系统？`,
             okText: "移除",
             okButtonProps: { danger: true },
             onOk: async () => {
                 await API.member.removeMember({
-                    workspace_id: MOCK_WORKSPACE_ID,
                     user_id: record.user_id,
                 })
                 message.success("已移除")
@@ -143,7 +135,6 @@ export default function MemberManagePage() {
             return
         }
         const res = await API.member.inviteUsers({
-            workspace_id: MOCK_WORKSPACE_ID,
             user_ids: selectedUserIds,
             role: "member",
         })
@@ -157,19 +148,6 @@ export default function MemberManagePage() {
         setSelectedUserIds((prev) =>
             checked ? [...prev, userId] : prev.filter((id) => id !== userId)
         )
-    }
-
-    const handleDeleteWorkspace = () => {
-        modal.confirm({
-            title: "删除工作空间",
-            content: "删除后空间内数据将无法恢复，确定继续？",
-            okText: "删除",
-            okButtonProps: { danger: true },
-            onOk: async () => {
-                await API.member.deleteWorkspace({ workspace_id: MOCK_WORKSPACE_ID })
-                message.success("空间已删除（演示）")
-            },
-        })
     }
 
     const columns: ColumnsType<MEMBER.WorkspaceMember> = [
@@ -241,10 +219,7 @@ export default function MemberManagePage() {
         <div className="flex h-full max-h-screen flex-col bg-default-bg-color">
             <div className="flex h-16 shrink-0 items-center justify-between gap-4 px-6 py-4 my-4">
                 <Space size={16} align="center">
-                    <span className="text-xl font-medium text-block-title-color">工作空间管理</span>
-                    {/* <Button type="text" danger icon={<DeleteOutlined />} onClick={handleDeleteWorkspace}>
-                        删除空间
-                    </Button> */}
+                    <span className="text-xl font-medium text-block-title-color">成员管理</span>
                 </Space>
                 <Button type="primary" icon={<PlusOutlined />} onClick={openAddMemberModal}>
                     添加成员
@@ -297,7 +272,7 @@ export default function MemberManagePage() {
                 destroyOnHidden
             >
                 <p className="mb-3 text-sm text-assistant-text-color">
-                    输入邮箱或姓名后查询，在结果中勾选需要加入空间的用户。
+                    输入邮箱或姓名后查询，在结果中勾选需要添加的用户。
                 </p>
                 <Input.Search
                     placeholder="输入邮箱或姓名搜索"

@@ -10,7 +10,8 @@ export function getAssetsPrisma(): PrismaClient {
   if (globalForAssets.prismaAssetsDb) {
     return globalForAssets.prismaAssetsDb
   }
-  const url = process.env.NEON_URL ?? process.env.DATABASE_URL
+  // const url = process.env.NEON_URL ?? process.env.DATABASE_URL
+  const url = process.env.NEON_URL
   if (!url) {
     throw new Error('NEON_URL 或 DATABASE_URL 未配置，无法访问 assets 表')
   }

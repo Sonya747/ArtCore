@@ -4,28 +4,43 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("NEON_URL")
 }
 
-/// 与 Neon `assets` 表一致（见 数据存储方案.md）
+model User {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username         String           @unique @db.VarChar(50)
+  password_hash    String
+  display_name     String?          @db.VarChar(50)
+  role             String           @default("member") @db.VarChar(20)
+  created_at       DateTime         @default(now()) @db.Timestamp(6)
+  createdAssets    Asset[]          @relation("AssetCreatedBy")
+  generation_tasks GenerationTask[]
+
+  @@map("users")
+}
+
 model Asset {
-  id           String            @id @db.Uuid
-  workspace_id String            @db.Uuid
-  name         String?           @db.VarChar(100)
-  type         String?           @db.VarChar(20)
-  description  String?
-  preview_url  String?
-  embedding    Unsupported("vector(1536)")?
-  created_by   String?           @db.Uuid
-  created_at   DateTime          @default(now()) @db.Timestamp(6)
-  assetTags    AssetTagMapping[]
+  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String?              @db.VarChar(100)
+  type           String?              @db.VarChar(20)
+  description    String?
+  preview_url    String?
+  created_by     String?              @db.Uuid
+  created_at     DateTime             @default(now()) @db.Timestamp(6)
+  creator        User?                @relation("AssetCreatedBy", fields: [created_by], references: [id], onDelete: SetNull)
+  assetTags      AssetTagMapping[]
+  taskReferences TaskAssetReference[]
+
+  @@index([type], map: "idx_assets_type")
+  @@index([created_at], map: "idx_assets_created_at")
 
   @@map("assets")
 }
 
 model Tag {
-  id        String            @id @db.Uuid
-  name      String?           @unique @db.VarChar(50)
+  id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String            @unique @db.VarChar(50)
   assetTags AssetTagMapping[]
 
   @@map("tags")
@@ -38,5 +53,68 @@ model AssetTagMapping {
   tag      Tag    @relation(fields: [tag_id], references: [id], onDelete: Cascade)
 
   @@id([asset_id, tag_id])
+  @@index([tag_id], map: "idx_asset_tag_mapping_tag_id")
   @@map("asset_tag_mapping")
+}
+
+model GenerationTask {
+  id                    String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id               String?              @db.Uuid
+  raw_prompt            String
+  final_prompt          String?
+  model_name            String?              @db.VarChar(50)
+  status                String               @default("pending") @db.VarChar(20)
+  image_size            String?              @db.VarChar(20)
+  request_params        Json?
+  error_message         String?
+  created_at            DateTime             @default(now()) @db.Timestamp(6)
+  finished_at           DateTime?            @db.Timestamp(6)
+  user                  User?                @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  prompt_records        PromptRecord[]
+  task_asset_references TaskAssetReference[]
+  generated_images      GeneratedImage[]
+
+  @@index([user_id], map: "idx_generation_tasks_user_id")
+  @@index([status], map: "idx_generation_tasks_status")
+  @@map("generation_tasks")
+}
+
+model PromptRecord {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  task_id           String            @db.Uuid
+  stage             String            @db.VarChar(20)
+  prompt_text       String?
+  structured_result Json?
+  model_name        String?           @db.VarChar(50)
+  created_at        DateTime          @default(now()) @db.Timestamp(6)
+  task              GenerationTask    @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  @@index([task_id], map: "idx_prompt_records_task_id")
+  @@map("prompt_records")
+}
+
+model TaskAssetReference {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  task_id         String         @db.Uuid
+  asset_id        String         @db.Uuid
+  reference_type  String         @db.VarChar(20)
+  match_method    String         @db.VarChar(20)
+  reference_order Int            @default(0)
+  task            GenerationTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  asset           Asset          @relation(fields: [asset_id], references: [id])
+
+  @@index([task_id], map: "idx_task_asset_references_task_id")
+  @@map("task_asset_references")
+}
+
+model GeneratedImage {
+  id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  task_id    String         @db.Uuid
+  image_url  String
+  sort_order Int            @default(0)
+  created_at DateTime       @default(now()) @db.Timestamp(6)
+  task       GenerationTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  @@index([task_id], map: "idx_generated_images_task_id")
+  @@map("generated_images")
 }

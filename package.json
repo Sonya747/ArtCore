@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "prisma:generate": "prisma generate",
-    "prisma:migrate:dev": "prisma migrate dev"
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:db:init": "prisma db execute --file prisma/init.sql --schema prisma/schema.prisma"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
