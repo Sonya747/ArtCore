@@ -12,8 +12,8 @@ export default function SidebarHeader({
 }) {
   return (
     <div className="h-[80px] px-1 flex items-center justify-center mb-4">
-      <Logo className="ml-3 theme-only-light h-10" />
-      <LogoDark className="ml-3 theme-only-dark h-10" />
+      <Logo className="theme-only-light h-10" />
+      <LogoDark className=" theme-only-dark h-10" />
     </div>
   )
 }
