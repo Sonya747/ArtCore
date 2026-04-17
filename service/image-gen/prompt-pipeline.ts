@@ -36,13 +36,14 @@ const SEMANTIC_SYSTEM_PROMPT =
   "你是一个语义解析器。请从用户输入中提取以下四个维度的信息：" +
   "主体(subject)、装备(equipment)、场景(scene)、风格(style)。" +
   "若用户未明确提及某一项，则该项设为 null。" +
-  "严格按照给定的 JSON Schema 输出 JSON，不要输出任何其他内容。"
+  "严格按照给定的 JSON Schema 输出 JSON,不要输出任何其他内容。"
 
 const SYNTHESIS_SYSTEM_PROMPT =
-  "你是一个 Stable Diffusion / 图像生成提示词专家。请根据以下提供的语义解析结果与资产描述，合成一段高质量的英文图像生成 Prompt。\n" +
+  "你是一个  Doubao Seedream 图像生成提示词专家。请根据以下提供的语义解析结果与资产描述，合成一段高质量的图像生成 Prompt。\n" +
   "规则：\n" +
-  "1. 若提供了资产描述，必须将其视觉特征融入 Prompt 中，并加入 \"as shown in the reference image\" 或 \"referencing the visual features of [Subject]\" 的表述。\n" +
-  "2. Prompt 应包含主体描述、环境/场景、光照、画质等常见修饰词。\n" +
+  "1. 若提供了资产描述，必须将其视觉特征融入 Prompt 中，并加入 \"如参考图所示\" 或 \"参考图 [主体]\" 的表述。\n" +
+  "2. Prompt 应包含主体描述、环境/场景、光照、画质等常见修饰词，以及保持建筑和人物比例合理等要求\n" +
+  "4. 不应丢失任何原prompt要求\n" +
   "3. 仅输出最终 Prompt 文本，不要输出任何解释或 JSON。"
 
 function buildFallbackPrompt(
@@ -115,6 +116,12 @@ export async function parseSemanticWithLLM(
   }
 
   try {
+
+    const SEMANTIC_SYSTEM_PROMPT =
+      "你是一个语义解析器。请从用户输入中提取以下四个维度的信息：" +
+      "主体(subject)、装备(equipment)、场景(scene)、风格(style)。" +
+      "若用户未明确提及某一项，则该项设为 null。" +
+      "严格按照给定的 JSON Schema 输出 JSON,不要输出任何其他内容。"
     const response = await arkChatCompletions(
       {
         model: SEMANTIC_MODEL,
@@ -170,7 +177,13 @@ export async function synthesizePromptWithLLM(
 
   try {
     const userMessage = buildSynthesisUserMessage(semantic, assets)
-
+    const SYNTHESIS_SYSTEM_PROMPT =
+      "你是一个Seedream图像生成提示词专家。请根据以下提供的语义解析结果与资产描述，合成一段高质量的图像生成 Prompt。\n" +
+      "规则：\n" +
+      "1. 若提供了资产描述，必须将其视觉特征融入 Prompt 中，并加入 \"如参考图所示\" 或 \"参考图 [主体]\" 的表述。\n" +
+      "2. Prompt 应包含主体描述、环境/场景、光照、画质等常见修饰词，以及保持建筑和人物比例合理等要求\n" +
+      "4. 不应丢失任何原prompt要求\n" +
+      "3. 仅输出最终 Prompt 文本，不要输出任何解释或 JSON。"
     const response = await arkChatCompletions(
       {
         model: SYNTHESIS_MODEL,

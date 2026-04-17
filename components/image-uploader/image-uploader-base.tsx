@@ -1,6 +1,6 @@
 import { DownOutlined } from '@ant-design/icons'
 import { Button, message, Select } from 'antd'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFileUpload } from '@/hooks'
 import { cn } from '../../utils/cn'
 import { checkImagePixels } from '../../utils/image-encode'
@@ -32,12 +32,37 @@ const ImageUploaderBase = ({
   const hasImageTypesRef = useRef(false)
   const [shouldFlash, setShouldFlash] = useState(false)
 
+  // 兼容：上层可能直接传入图片 URL 数组（string[]），而不是 IMAGES.ImageData[]
+  const imagesValue: IMAGES.ImageData[] = useMemo(() => {
+    const raw = Array.isArray(value) ? (value as unknown[]) : []
+    return raw
+      .map((item) => {
+        if (typeof item === 'string') {
+          return { data: item, type: 'image' as const } as IMAGES.ImageData
+        }
+        if (item && typeof item === 'object' && 'data' in item) {
+          return item as IMAGES.ImageData
+        }
+        return null
+      })
+      .filter((x): x is IMAGES.ImageData => Boolean(x))
+  }, [value])
+
+  // 初始化归一化：将 value 里的 string URL 自动转换成 IMAGES.ImageData，避免上层流程把它当“非对象”而丢失
+  useEffect(() => {
+    if (!onChange) return
+    const raw = Array.isArray(value) ? (value as unknown[]) : []
+    const hasString = raw.some((item) => typeof item === 'string')
+    if (!hasString) return
+    onChange(imagesValue)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+
   // 处理上传的文件（粘贴和拖拽共用）
   const handleUploadFiles = useCallback(
     async (files: File[]) => {
-      // 过滤 jpg、png 格式
       let imageFiles = files.filter(
-        (file) => file.type === 'image/jpeg' || file.type === 'image/png'
+        (file) => file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/webp'
       )
       if (imageFiles.length === 0) return
 
@@ -75,7 +100,7 @@ const ImageUploaderBase = ({
         image_type: defaultImageType,
       }))
 
-      const remainingSlots = maxCount - value.length
+      const remainingSlots = maxCount - imagesValue.length
       if (remainingSlots <= 0) {
         message.warning(`最多上传${maxCount}张图片`)
         return
@@ -85,10 +110,10 @@ const ImageUploaderBase = ({
         message.warning(`最多上传${maxCount}张图片，当前保留前${remainingSlots}张`)
       }
 
-      const updatedImages = [...value, ...newImages].slice(0, maxCount)
+      const updatedImages = [...imagesValue, ...newImages].slice(0, maxCount)
       onChange?.(updatedImages)
     },
-    [imageTypes, maxCount, value, onChange, fileSizeLimit, pixelLimit]
+    [imageTypes, maxCount, imagesValue, onChange, fileSizeLimit, pixelLimit]
   )
 
   // 使用文件上传 hook
@@ -123,21 +148,21 @@ const ImageUploaderBase = ({
 
   // 处理删除
   const handleDelete = (index: number) => {
-    const newImages = value.filter((_, i) => i !== index)
+    const newImages = imagesValue.filter((_, i) => i !== index)
     onChange?.(newImages)
   }
 
   // 处理编辑
   const handleEdit = (index: number) => {
     openModal({
-      imageUrl: value[index].data,
+      imageUrl: imagesValue[index].data,
       mode: 'edit',
       onSave: (canvasResult) => {
         console.log(canvasResult)
         if (!canvasResult.imageDataURL) return
-        const updatedImages = [...value]
+        const updatedImages = [...imagesValue]
         updatedImages[index] = {
-          ...value[index],
+          ...imagesValue[index],
           data: canvasResult.imageDataURL,
         }
         onChange?.(updatedImages)
@@ -149,20 +174,20 @@ const ImageUploaderBase = ({
 
   // 处理图片类型变化
   const handleImageTypeChange = (index: number, imageType: string) => {
-    const updatedImages = [...value]
+    const updatedImages = [...imagesValue]
     updatedImages[index] = {
-      ...value[index],
+      ...imagesValue[index],
       image_type: imageType,
     }
     onChange?.(updatedImages)
   }
 
   useEffect(() => {
-    if (value.length > maxCount) {
-      const newImages = value.slice(0, maxCount)
+    if (imagesValue.length > maxCount) {
+      const newImages = imagesValue.slice(0, maxCount)
       onChange?.(newImages)
     }
-  }, [maxCount, value])
+  }, [maxCount, imagesValue, onChange])
 
   return (
     <div className='flex flex-col gap-2'>
@@ -174,7 +199,7 @@ const ImageUploaderBase = ({
         </div>
         {maxCount > 1 && (
           <span className='text-sm text-[#AAB3B8] dark:text-gray-500'>
-            {value.length}/{maxCount}
+            {imagesValue.length}/{maxCount}
           </span>
         )}
       </div>
@@ -193,9 +218,9 @@ const ImageUploaderBase = ({
       >
         {/* 图片列表 */}
         <div className='flex flex-wrap gap-2'>
-          {value.map((image, index) => (
+          {imagesValue.map((image, index) => (
             <div
-              key={image.data}
+              key={`${image.type}-${image.data}-${index}`}
               className='relative w-[117px] h-[117px] rounded-md overflow-hidden group'
             >
               <img
@@ -257,7 +282,7 @@ const ImageUploaderBase = ({
           ))}
 
           {/* 添加按钮 */}
-          {value.length < maxCount && (
+          {imagesValue.length < maxCount && (
             <UploadButton
               className='w-[117px] h-[117px]'
               multiple={maxCount > 1}

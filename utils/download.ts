@@ -45,3 +45,48 @@ export const downloadFile = ({
     downloadBlob(blob, fileName)
   }
 }
+
+const BASE64_IMAGE_DATA_URL_RE = /^data:image\/[a-zA-Z0-9.+-]+;base64,/
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result)
+      } else {
+        reject(new Error("图片读取失败"))
+      }
+    }
+    reader.onerror = () => {
+      reject(new Error("图片读取失败"))
+    }
+    reader.readAsDataURL(blob)
+  })
+}
+
+export async function normalizeImageToBase64DataUrl(raw: string): Promise<string | null> {
+  if (!raw) {
+    return null
+  }
+  if (BASE64_IMAGE_DATA_URL_RE.test(raw)) {
+    return raw
+  }
+  if (raw.startsWith("data:")) {
+    return null
+  }
+  try {
+    const response = await fetch(raw)
+    if (!response.ok) {
+      return null
+    }
+    const blob = await response.blob()
+    if (!blob.type.startsWith("image/")) {
+      return null
+    }
+    const dataUrl = await blobToDataUrl(blob)
+    return BASE64_IMAGE_DATA_URL_RE.test(dataUrl) ? dataUrl : null
+  } catch {
+    return null
+  }
+}

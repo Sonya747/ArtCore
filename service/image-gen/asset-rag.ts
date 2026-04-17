@@ -16,13 +16,35 @@ const SEMANTIC_KEYS: Array<keyof PromptEngineering.SemanticParseResult> = [
 ]
 
 /**
- * 针对单个关键词，在 assets 表中通过 tags.name 精准匹配 + description 模糊匹配查找资产。
- * 优先返回 tag 精准命中的记录；无命中则退化为 description ILIKE。
+ * 针对单个关键词，在 assets 表中通过 tags.name 精确匹配 -> tags.name 模糊匹配 -> description 模糊匹配查找资产。
+ * 优先返回 tag 精确命中的记录；无命中则依次退化为 tag 模糊命中和 description ILIKE。
  */
 async function searchAssetByKeyword(keyword: string): Promise<AssetRow | null> {
   const runQuery = async () => {
     const prisma = getAssetsPrisma()
-    const byTag = await prisma.asset.findFirst({
+    //name 精确匹配
+    const byNameExact = await prisma.asset.findFirst({
+      where: {
+        preview_url: { not: null },
+        name: { equals: keyword, mode: "insensitive" },
+      },
+      select: { id: true, name: true, description: true, preview_url: true },
+      orderBy: { created_at: "desc" },
+    })
+    if (byNameExact) return byNameExact
+    //name 模糊匹配
+    const byNameFuzzy = await prisma.asset.findFirst({
+      where: {
+        preview_url: { not: null },
+        name: { contains: keyword, mode: "insensitive" },
+      },
+      select: { id: true, name: true, description: true, preview_url: true },
+      orderBy: { created_at: "desc" },
+    })
+    if (byNameFuzzy) return byNameFuzzy
+
+    //tag 精确匹配
+    const byTagExact = await prisma.asset.findFirst({
       where: {
         preview_url: { not: null },
         assetTags: {
@@ -34,9 +56,22 @@ async function searchAssetByKeyword(keyword: string): Promise<AssetRow | null> {
       select: { id: true, name: true, description: true, preview_url: true },
       orderBy: { created_at: "desc" },
     })
-
-    if (byTag) return byTag
-
+    if (byTagExact) return byTagExact
+    //tag 模糊匹配
+    const byTagFuzzy = await prisma.asset.findFirst({
+      where: {
+        preview_url: { not: null },
+        assetTags: {
+          some: {
+            tag: { name: { contains: keyword, mode: "insensitive" } },
+          },
+        },
+      },
+      select: { id: true, name: true, description: true, preview_url: true },
+      orderBy: { created_at: "desc" },
+    })
+    if (byTagFuzzy) return byTagFuzzy
+    //description 模糊匹配
     return prisma.asset.findFirst({
       where: {
         preview_url: { not: null },
