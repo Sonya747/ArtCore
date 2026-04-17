@@ -1,5 +1,6 @@
 import Providers from "./providers"
 import Sidebar from "@/components/sidebar"
+import AppHeader from "@/components/app-header"
 import { initDatabaseConnection } from '@/service/db/init'
 import './globals.css'
 const themeScript = `
@@ -30,13 +31,16 @@ export default async function RootLayout({
 
       <body className="">
         <Providers>
-
-          <div className="min-h-screen min-w-screen flex flex-row overflow-hidden">
-            <Sidebar />
-            <div className="overflow-hidden grow min-w-0">
-              {children}
+          <div className="min-h-screen min-w-screen overflow-hidden bg-[#f7f8fa]">
+            <AppHeader />
+            <div className="flex h-screen flex-row overflow-hidden pt-16">
+              <Sidebar />
+              <div className="overflow-hidden grow min-w-0">
+                {children}
+              </div>
             </div>
-          </div>        </Providers>
+          </div>
+        </Providers>
 
       </body>
     </html>
