@@ -1,3 +1,4 @@
+import { CheckCircleOutlined } from '@ant-design/icons'
 import IconFont from '@/components/icon-font'
 
 /**
@@ -38,11 +39,25 @@ export const MENU_CONFIGS: MenuGroupConfig[] = [
         showTaskBar: true,
       },
       {
+        key: 'chat-gen',
+        icon: <IconFont type='icon-chat' />,
+        label: 'AI 对话',
+        showSidebar: false,
+        showTaskBar: false,
+      },
+      {
         key:'task-manage',
         icon: <IconFont type='icon-list' />,
         label: '任务管理',
         showSidebar: true,
         showTaskBar: true,
+      },
+      {
+        key: 'review',
+        icon: <CheckCircleOutlined />,
+        label: '审批中心',
+        showSidebar: true,
+        showTaskBar: false,
       }
     ],
   },

@@ -6,6 +6,7 @@ import { UserOutlined, LockOutlined, SmileOutlined } from '@ant-design/icons'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { loginApi, registerApi } from '@/service/auth'
 import { useGlobalStore } from '@/store/global'
+import { ls } from '@/utils/localStorage'
 
 export default function LoginPage() {
   return (
@@ -36,6 +37,7 @@ function LoginContent() {
     try {
       const { user } = await loginApi(values)
       setUserInfo(user)
+      ls.set('user_info', user)
       message.success('登录成功')
       router.replace(redirect)
     } catch (e) {
