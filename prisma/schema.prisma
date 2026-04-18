@@ -4,18 +4,21 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("NEON_URL")
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  username         String           @unique @db.VarChar(50)
-  password_hash    String
-  display_name     String?          @db.VarChar(50)
-  role             String           @default("member") @db.VarChar(20)
-  created_at       DateTime         @default(now()) @db.Timestamp(6)
-  createdAssets    Asset[]          @relation("AssetCreatedBy")
-  generation_tasks GenerationTask[]
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username           String             @unique @db.VarChar(50)
+  password_hash      String
+  display_name       String?            @db.VarChar(50)
+  role               String             @default("member") @db.VarChar(20)
+  created_at         DateTime           @default(now()) @db.Timestamp(6)
+  createdAssets      Asset[]            @relation("AssetCreatedBy")
+  generation_tasks   GenerationTask[]
+  submittedApprovals ApprovalRequest[]  @relation("ApprovalSubmitter")
+  reviewingApprovals ApprovalRequest[]  @relation("ApprovalReviewer")
+  chat_conversations ChatConversation[]
 
   @@map("users")
 }
@@ -65,6 +68,7 @@ model GenerationTask {
   model_name            String?              @db.VarChar(50)
   status                String               @default("pending") @db.VarChar(20)
   image_size            String?              @db.VarChar(20)
+  image_url             String?
   request_params        Json?
   error_message         String?
   created_at            DateTime             @default(now()) @db.Timestamp(6)
@@ -73,6 +77,7 @@ model GenerationTask {
   prompt_records        PromptRecord[]
   task_asset_references TaskAssetReference[]
   generated_images      GeneratedImage[]
+  approval_requests     ApprovalRequest[]
 
   @@index([user_id], map: "idx_generation_tasks_user_id")
   @@index([status], map: "idx_generation_tasks_status")
@@ -117,4 +122,63 @@ model GeneratedImage {
 
   @@index([task_id], map: "idx_generated_images_task_id")
   @@map("generated_images")
+}
+
+model ApprovalRequest {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  task_id           String            @db.Uuid
+  submitter_id      String            @db.Uuid
+  reviewer_id       String?           @db.Uuid
+  status            String            @default("pending") @db.VarChar(20)
+  submitter_note    String?
+  reviewer_note     String?
+  parent_request_id String?           @db.Uuid
+  version           Int               @default(1)
+  created_at        DateTime          @default(now()) @db.Timestamp(6)
+  reviewed_at       DateTime?         @db.Timestamp(6)
+
+  task      GenerationTask    @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  submitter User              @relation("ApprovalSubmitter", fields: [submitter_id], references: [id])
+  reviewer  User?             @relation("ApprovalReviewer", fields: [reviewer_id], references: [id], onDelete: SetNull)
+  parent    ApprovalRequest?  @relation("ApprovalVersion", fields: [parent_request_id], references: [id], onDelete: SetNull)
+  children  ApprovalRequest[] @relation("ApprovalVersion")
+
+  @@index([submitter_id], map: "idx_approval_requests_submitter_id")
+  @@index([reviewer_id], map: "idx_approval_requests_reviewer_id")
+  @@index([status], map: "idx_approval_requests_status")
+  @@index([task_id], map: "idx_approval_requests_task_id")
+  @@index([parent_request_id], map: "idx_approval_requests_parent_id")
+  @@map("approval_requests")
+}
+
+model ChatConversation {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String?       @db.Uuid
+  title         String        @default("新对话") @db.VarChar(200)
+  model_name    String?       @db.VarChar(100)
+  system_prompt String?
+  created_at    DateTime      @default(now()) @db.Timestamp(6)
+  updated_at    DateTime      @default(now()) @db.Timestamp(6)
+  user          User?         @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  messages      ChatMessage[]
+
+  @@index([user_id], map: "idx_chat_conversations_user_id")
+  @@index([updated_at(sort: Desc)], map: "idx_chat_conversations_updated_at")
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversation_id String           @db.Uuid
+  role            String           @db.VarChar(20)
+  content         String           @default("")
+  model_name      String?          @db.VarChar(100)
+  token_usage     Json?
+  status          String           @default("success") @db.VarChar(20)
+  created_at      DateTime         @default(now()) @db.Timestamp(6)
+  conversation    ChatConversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+
+  @@index([conversation_id], map: "idx_chat_messages_conversation_id")
+  @@index([created_at], map: "idx_chat_messages_created_at")
+  @@map("chat_messages")
 }

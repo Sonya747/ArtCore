@@ -46,19 +46,19 @@ export const MENU_CONFIGS: MenuGroupConfig[] = [
         showTaskBar: false,
       },
       {
-        key:'task-manage',
+        key: "production",
+        icon: <IconFont type="icon-image" />,
+        label: "我的作品",
+        showSidebar: true,
+        showTaskBar: false,
+      },
+      {
+        key: 'task-manage',
         icon: <IconFont type='icon-list' />,
         label: '任务管理',
         showSidebar: true,
         showTaskBar: true,
       },
-      {
-        key: 'review',
-        icon: <CheckCircleOutlined />,
-        label: '审批中心',
-        showSidebar: true,
-        showTaskBar: false,
-      }
     ],
   },
   {
@@ -79,6 +79,13 @@ export const MENU_CONFIGS: MenuGroupConfig[] = [
         showSidebar: true,
         showTaskBar: false,
       },
+      {
+        key: 'review',
+        icon: <CheckCircleOutlined />,
+        label: '审批中心',
+        showSidebar: true,
+        showTaskBar: false,
+      }
     ],
   },
 ]

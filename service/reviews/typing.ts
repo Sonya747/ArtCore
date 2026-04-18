@@ -17,6 +17,7 @@ export namespace REVIEWS {
     model_name: string | null
     image_size: string | null
     request_params: Record<string, unknown> | null
+    image_url: string | null
     thumbnail_url: string | null
   }
 

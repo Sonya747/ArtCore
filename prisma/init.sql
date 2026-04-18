@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS "generation_tasks" (
     "model_name" VARCHAR(50),
     "status" VARCHAR(20) NOT NULL DEFAULT 'pending',
     "image_size" VARCHAR(20),
+    "image_url" TEXT,
     "request_params" JSONB,
     "error_message" TEXT,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -80,6 +81,8 @@ CREATE TABLE IF NOT EXISTS "generation_tasks" (
     CONSTRAINT "generation_tasks_status_check" CHECK ("status" IN ('pending', 'processing', 'success', 'failed')),
     CONSTRAINT "generation_tasks_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
+
+ALTER TABLE "generation_tasks" ADD COLUMN IF NOT EXISTS "image_url" TEXT;
 
 CREATE INDEX IF NOT EXISTS "idx_generation_tasks_user_id" ON "generation_tasks"("user_id");
 CREATE INDEX IF NOT EXISTS "idx_generation_tasks_status" ON "generation_tasks"("status");
@@ -117,15 +120,29 @@ CREATE TABLE IF NOT EXISTS "task_asset_references" (
 
 CREATE INDEX IF NOT EXISTS "idx_task_asset_references_task_id" ON "task_asset_references"("task_id");
 
-CREATE TABLE IF NOT EXISTS "generated_images" (
+CREATE TABLE IF NOT EXISTS "approval_requests" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "task_id" UUID NOT NULL,
-    "image_url" TEXT NOT NULL,
-    "sort_order" INTEGER NOT NULL DEFAULT 0,
+    "submitter_id" UUID NOT NULL,
+    "reviewer_id" UUID,
+    "status" VARCHAR(20) NOT NULL DEFAULT 'pending',
+    "submitter_note" TEXT,
+    "reviewer_note" TEXT,
+    "parent_request_id" UUID,
+    "version" INTEGER NOT NULL DEFAULT 1,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "reviewed_at" TIMESTAMP(6),
 
-    CONSTRAINT "generated_images_pkey" PRIMARY KEY ("id"),
-    CONSTRAINT "generated_images_task_id_fkey" FOREIGN KEY ("task_id") REFERENCES "generation_tasks"("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "approval_requests_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "approval_requests_status_check" CHECK ("status" IN ('pending', 'approved', 'rejected')),
+    CONSTRAINT "approval_requests_task_id_fkey" FOREIGN KEY ("task_id") REFERENCES "generation_tasks"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "approval_requests_submitter_id_fkey" FOREIGN KEY ("submitter_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "approval_requests_reviewer_id_fkey" FOREIGN KEY ("reviewer_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "approval_requests_parent_request_id_fkey" FOREIGN KEY ("parent_request_id") REFERENCES "approval_requests"("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS "idx_generated_images_task_id" ON "generated_images"("task_id");
+CREATE INDEX IF NOT EXISTS "idx_approval_requests_submitter_id" ON "approval_requests"("submitter_id");
+CREATE INDEX IF NOT EXISTS "idx_approval_requests_reviewer_id" ON "approval_requests"("reviewer_id");
+CREATE INDEX IF NOT EXISTS "idx_approval_requests_status" ON "approval_requests"("status");
+CREATE INDEX IF NOT EXISTS "idx_approval_requests_task_id" ON "approval_requests"("task_id");
+CREATE INDEX IF NOT EXISTS "idx_approval_requests_parent_id" ON "approval_requests"("parent_request_id");

@@ -6,7 +6,7 @@ import { useTheme } from "@/store/theme"
 import { getAntdTheme } from "@/configs/theme"
 import { useGlobalStore } from "@/store/global"
 import { ls } from "@/utils/localStorage"
-import { useEffect, useLayoutEffect } from "react"
+import { useEffect, useLayoutEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 
 const PUBLIC_PATHS = ["/login", "/register"]
@@ -16,12 +16,18 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const userInfo = useGlobalStore((s) => s.userInfo)
   const setUserInfo = useGlobalStore((s) => s.setUserInfo)
+  const [hydrated, setHydrated] = useState(false)
 
   useLayoutEffect(() => {
     void useGlobalStore.persist.rehydrate()
   }, [])
 
   useEffect(() => {
+    setHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!hydrated) return
     if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) return
 
     const stored = ls.get("user_info")
@@ -33,9 +39,10 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (!stored && !userInfo) {
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`)
     }
-  }, [pathname, userInfo, setUserInfo, router])
+  }, [hydrated, pathname, userInfo, setUserInfo, router])
 
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) return <>{children}</>
+  if (!hydrated) return <>{children}</>
   if (!userInfo && !ls.get("user_info")) return null
 
   return <>{children}</>

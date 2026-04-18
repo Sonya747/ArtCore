@@ -1,7 +1,6 @@
 import Providers from "./providers"
 import Sidebar from "@/components/sidebar"
 import AppHeader from "@/components/app-header"
-// import { Ma_Shan_Zheng } from "next/font/google"
 import { initDatabaseConnection } from '@/service/db/init'
 import './globals.css'
 

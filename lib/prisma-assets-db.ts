@@ -1,28 +1,22 @@
 import { PrismaClient } from '@prisma/client'
+import { config as loadEnv } from 'dotenv'
+import { join } from 'node:path'
 
 const globalForAssets = globalThis as unknown as { prismaAssetsDb?: PrismaClient }
-
-function resolveNeonUrl(): string | undefined {
-  const neon = process.env.NEON_URL?.trim()
-  if (neon) return neon
-
-  return undefined
-}
-
 /**
- * 资产库读写的 Postgres 连接：优先 NEON_URL，否则 DATABASE_URL。
- * 与根目录 lib/prisma 可指向不同库（例如本地任务库 + Neon 资产库）。
+ * 资产库读写固定使用本地 DATABASE_URL。
+ * neon有时候连不上因为，
  */
 export function getAssetsPrisma(): PrismaClient {
   if (globalForAssets.prismaAssetsDb) {
     return globalForAssets.prismaAssetsDb
   }
 
-  const url = resolveNeonUrl()
+  loadEnv({ path: join(process.cwd(), '.env'), override: true })
+  const url = process.env.DATABASE_URL?.trim()
   if (!url) {
-    throw new Error('NEON_URL 未配置，无法访问 assets 表')
+    throw new Error('DATABASE_URL 未配置，无法访问本地数据库')
   }
-
   const client = new PrismaClient({
     datasources: { db: { url } },
     log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],

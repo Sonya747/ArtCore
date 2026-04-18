@@ -188,6 +188,7 @@ export default function Page() {
   const [pipeline, setPipeline] = useState<PipelineState>(INITIAL_PIPELINE)
   const pipelineAbortRef = useRef(false)
 
+  //TODO 返回图片url
   const runOssUpload = useCallback(
     async (urls: string[]) => {
       if (urls.length === 0) {
@@ -276,7 +277,7 @@ export default function Page() {
           const synthesis = await synthesizePromptWithLLM(semantic, assets, apiKey)
           if (pipelineAbortRef.current) return
           //去除无效数据（没有图片url或为null）
-          const assetImages =Object.values(assets).filter((a) => a && !!a.image_url).map((a) => a.image_url!)
+          const assetImages = Object.values(assets).filter((a) => a && !!a.image_url).map((a) => a.image_url!)
           //合并用户选择的参考图和资产检索结果
           const allImages = [...userRefImages, ...assetImages]
           //更新表单参考图
@@ -356,11 +357,13 @@ export default function Page() {
         parseImageGenResponse(raw, finalPayload.prompt, pipeline.formValues.model) ?? null
 
       if (data) {
+        console.log("data", data)
         setResult(data)
         const sourceUrls = getResultImageUrls(data)
+
         if (sourceUrls.length > 0) {
           setOssUpload({ status: "uploading" })
-          void runOssUpload(sourceUrls)
+          runOssUpload(sourceUrls)
         } else {
           setOssUpload({ status: "idle" })
         }
@@ -667,12 +670,12 @@ export default function Page() {
                       提示词: <span className="text-block-title-color">{result.prompt}</span>
                     </div>
                     {/* {!!pipeline.pendingPayload?.image && ( */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-block-title-color">参考图</span>
-                        {referenceImages.map((img) => (
-                          <img src={String(img)} alt="参考图" className="w-30 h-30 rounded-2xl" />
-                        ))}
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-block-title-color">参考图</span>
+                      {referenceImages.map((img) => (
+                        <img src={String(img)} alt="参考图" className="w-30 h-30 rounded-2xl" />
+                      ))}
+                    </div>
                     {/* )} */}
                   </div>
                 ) : (

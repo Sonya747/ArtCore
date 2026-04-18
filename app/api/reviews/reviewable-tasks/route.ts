@@ -29,6 +29,7 @@ export async function GET() {
       model_name: t.model_name,
       image_size: t.image_size,
       request_params: t.request_params as Record<string, unknown> | null,
+      image_url: t.image_url ?? t.generated_images[0]?.image_url ?? null,
       thumbnail_url: t.generated_images[0]?.image_url ?? null,
       created_at: t.created_at.toISOString(),
       status: t.status,

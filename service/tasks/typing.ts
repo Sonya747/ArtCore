@@ -9,6 +9,7 @@ export namespace TASKS {
     model_name: string | null
     status: GenerationTaskStatus
     image_size: string | null
+    image_url: string | null
     request_params: Record<string, unknown> | null
     error_message: string | null
     created_at: string
@@ -34,6 +35,7 @@ export namespace TASKS {
     model_name?: string | null
     status: GenerationTaskStatus
     image_size?: string | null
+    image_url?: string | null
     request_params?: Record<string, unknown> | null
     error_message?: string | null
   }
