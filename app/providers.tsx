@@ -4,7 +4,42 @@ import { App as AntdApp, ConfigProvider } from "antd"
 import zhCN from "antd/es/locale/zh_CN"
 import { useTheme } from "@/store/theme"
 import { getAntdTheme } from "@/configs/theme"
+import { useGlobalStore } from "@/store/global"
+import { ls } from "@/utils/localStorage"
 import { useEffect, useLayoutEffect } from "react"
+import { usePathname, useRouter } from "next/navigation"
+
+const PUBLIC_PATHS = ["/login", "/register"]
+
+function AuthGuard({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const userInfo = useGlobalStore((s) => s.userInfo)
+  const setUserInfo = useGlobalStore((s) => s.setUserInfo)
+
+  useLayoutEffect(() => {
+    void useGlobalStore.persist.rehydrate()
+  }, [])
+
+  useEffect(() => {
+    if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) return
+
+    const stored = ls.get("user_info")
+    if (stored && !userInfo) {
+      setUserInfo(stored as any)
+      return
+    }
+
+    if (!stored && !userInfo) {
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`)
+    }
+  }, [pathname, userInfo, setUserInfo, router])
+
+  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) return <>{children}</>
+  if (!userInfo && !ls.get("user_info")) return null
+
+  return <>{children}</>
+}
 
 export default function Providers({
   children,
@@ -45,7 +80,9 @@ export default function Providers({
         mask: { blur: false },
       }}
     >
-      <AntdApp>{children}</AntdApp>
+      <AntdApp>
+        <AuthGuard>{children}</AuthGuard>
+      </AntdApp>
     </ConfigProvider>
   )
 }

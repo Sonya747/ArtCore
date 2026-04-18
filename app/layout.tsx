@@ -1,15 +1,15 @@
 import Providers from "./providers"
 import Sidebar from "@/components/sidebar"
 import AppHeader from "@/components/app-header"
-import { Ma_Shan_Zheng } from "next/font/google"
+// import { Ma_Shan_Zheng } from "next/font/google"
 import { initDatabaseConnection } from '@/service/db/init'
 import './globals.css'
 
-const displayCnFont = Ma_Shan_Zheng({
-  weight: "400",
-  variable: "--font-display-cn",
-  preload: false,
-})
+// const displayCnFont = Ma_Shan_Zheng({
+//   weight: "400",
+//   variable: "--font-display-cn",
+//   preload: false,
+// })
 
 const themeScript = `
 (function() {
@@ -37,7 +37,7 @@ export default async function RootLayout({
         />
       </head>
 
-      <body className={displayCnFont.variable}>
+      <body>
         <Providers>
           <div className="min-h-screen min-w-screen overflow-hidden bg-[#f7f8fa]">
             <AppHeader />
