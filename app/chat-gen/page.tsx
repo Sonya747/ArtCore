@@ -46,26 +46,26 @@ const WELCOME_PROMPTS = [
   {
     key: "1",
     icon: <EditOutlined style={{ color: "#990dfb" }} />,
-    label: "写一首关于春天的诗",
-    description: "让AI展示它的创意写作能力",
+    label: "帮我设计一个暗黑风Boss角色概念",
+    description: "从轮廓、材质到配色给出完整设定思路",
   },
   {
     key: "2",
     icon: <RobotOutlined style={{ color: "#990dfb" }} />,
-    label: "解释量子计算的基本原理",
-    description: "用通俗易懂的方式理解前沿科技",
+    label: "生成一套二次元角色立绘提示词",
+    description: "按发型、服装、姿态和光影拆分关键词",
   },
   {
     key: "3",
     icon: <CopyOutlined style={{ color: "#990dfb" }} />,
-    label: "帮我写一封商务邮件",
-    description: "高效完成日常办公任务",
+    label: "给我做一张赛博朋克城市场景分镜",
+    description: "包含远中近景元素和镜头运动建议",
   },
   {
     key: "4",
     icon: <ReloadOutlined style={{ color: "#990dfb" }} />,
-    label: "对比 React 和 Vue 的优缺点",
-    description: "技术选型的专业分析",
+    label: "分析《原神》角色美术风格特点",
+    description: "从形体语言、色彩体系和细节设计拆解",
   },
 ]
 
@@ -386,7 +386,7 @@ export default function ChatGenPage() {
                   />
                 }
                 title="你好，我是 ArtCore AI"
-                description="基于火山引擎大模型，为你提供智能对话服务。试试下面的提示开始吧！"
+                description="我是你的游戏美术创作助手，可协助角色、场景与风格设定。试试下面的灵感提示吧！"
                 variant="borderless"
               />
               <Prompts
