@@ -99,24 +99,18 @@ function buildSynthesisUserMessage(
   return lines.join("\n")
 }
 
-/**
- * LLM Call #1: 结构化语义解析
- *
- * 调用火山方舟 Chat Completions API，使用 response_format: json_schema
- * 将用户自然语言输入解析为结构化 JSON（subject / equipment / scene / style）。
- */
+
 export async function parseSemanticWithLLM(
   input: PromptEngineering.UserInput,
   authorization?: string,
 ): Promise<PromptEngineering.SemanticParseResult> {
   const apiKey = authorization ?? process.env.NEXT_PUBLIC_ARK_API_KEY
   if (!apiKey) {
-    console.warn("[parseSemanticWithLLM] 未配置 ARK_API_KEY，返回空解析结果")
+    console.warn("结构化语义解析未配置模型API_KEY，返回空")
     return { subject: null, equipment: null, scene: null, style: null }
   }
 
   try {
-
     const SEMANTIC_SYSTEM_PROMPT =
       "你是一个语义解析器。请从用户输入中提取以下四个维度的信息：" +
       "主体(subject)、装备(equipment)、场景(scene)、风格(style)。" +
@@ -140,12 +134,7 @@ export async function parseSemanticWithLLM(
     )
 
     const raw = extractContent(response)
-    if (!raw) {
-      console.warn("[parseSemanticWithLLM] LLM 返回空内容，使用 fallback")
-      return { subject: null, equipment: null, scene: null, style: null }
-    }
-
-    const parsed = JSON.parse(raw) as PromptEngineering.SemanticParseResult
+    const parsed = JSON.parse(raw!) as PromptEngineering.SemanticParseResult
     return {
       subject: parsed.subject ?? null,
       equipment: parsed.equipment ?? null,
@@ -153,7 +142,7 @@ export async function parseSemanticWithLLM(
       style: parsed.style ?? null,
     }
   } catch (e) {
-    console.error("[parseSemanticWithLLM] LLM 调用失败，使用 fallback", e)
+    console.error("结构化语义解析LLM调用失败！", e)
     return { subject: null, equipment: null, scene: null, style: null }
   }
 }
@@ -171,7 +160,7 @@ export async function synthesizePromptWithLLM(
 ): Promise<PromptEngineering.PromptSynthesisResult> {
   const apiKey = authorization ?? process.env.NEXT_PUBLIC_ARK_API_KEY
   if (!apiKey) {
-    console.warn("[synthesizePromptWithLLM] 未配置 ARK_API_KEY，使用本地 fallback")
+    console.warn("Prompt合成未配置模型API_KEY，返回空")
     return buildFallbackPrompt(semantic, assets)
   }
 
@@ -198,19 +187,14 @@ export async function synthesizePromptWithLLM(
     )
 
     const prompt = extractContent(response)?.trim()
-    if (!prompt) {
-      console.warn("[synthesizePromptWithLLM] LLM 返回空内容，使用本地 fallback")
-      return buildFallbackPrompt(semantic, assets)
-    }
-
     const references = SEMANTIC_KEYS
       .map((key) => assets[key])
       .filter((a): a is PromptEngineering.AssetReference => !!a?.matched && !!a.image_url)
       .map((a) => a.image_url!)
 
-    return { prompt, references }
+    return { prompt: prompt!, references }
   } catch (e) {
-    console.error("[synthesizePromptWithLLM] LLM 调用失败，使用本地 fallback", e)
+    console.error("Prompt合成LLM调用失败！", e)
     return buildFallbackPrompt(semantic, assets)
   }
 }

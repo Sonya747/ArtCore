@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="创作模块功能结构图">
+    <mxGraphModel dx="1422" dy="762" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1120" pageHeight="520" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ROOT -->
+        <mxCell id="2" value="创作模块" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1B4F8A;strokeColor=#1B4F8A;fontColor=#ffffff;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="410" y="30" width="300" height="52" as="geometry" />
+        </mxCell>
+
+        <!-- L1 SUB-MODULES (orange) -->
+        <mxCell id="3" value="图片创作" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E67E22;strokeColor=#CA6F1E;fontColor=#ffffff;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="140" width="320" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="AI 对话" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E67E22;strokeColor=#CA6F1E;fontColor=#ffffff;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="140" width="320" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="空间资产" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E67E22;strokeColor=#CA6F1E;fontColor=#ffffff;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="760" y="140" width="320" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- L2: 图片创作 -->
+        <mxCell id="10" value="要素解析&#xa;与输入处理" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1ABC9C;strokeColor=#148F77;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="55" y="275" width="105" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="11" value="Prompt 组装&#xa;与生图调用" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1ABC9C;strokeColor=#148F77;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="170" y="275" width="105" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="12" value="侧栏与任务栏&#xa;联动迭代" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1ABC9C;strokeColor=#148F77;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="285" y="275" width="105" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- L2: AI 对话 -->
+        <mxCell id="13" value="多会话管理" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1ABC9C;strokeColor=#148F77;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="415" y="275" width="105" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="14" value="流式回复&#xa;与消息渲染" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1ABC9C;strokeColor=#148F77;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="530" y="275" width="105" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="15" value="辅助创作&#xa;与导出草稿" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1ABC9C;strokeColor=#148F77;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="645" y="275" width="105" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- L2: 空间资产 -->
+        <mxCell id="16" value="素材入库&#xa;与文件治理" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1ABC9C;strokeColor=#148F77;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="775" y="275" width="105" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="17" value="标签与&#xa;元数据管理" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1ABC9C;strokeColor=#148F77;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="890" y="275" width="105" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="18" value="资产检索&#xa;与引用输出" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1ABC9C;strokeColor=#148F77;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1005" y="275" width="105" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- ROOT → L1 -->
+        <mxCell id="20" value="" style="endArrow=none;startArrow=none;html=1;strokeColor=#555555;exitX=0.22;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="2" target="3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="21" value="" style="endArrow=none;startArrow=none;html=1;strokeColor=#555555;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="2" target="4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="22" value="" style="endArrow=none;startArrow=none;html=1;strokeColor=#555555;exitX=0.78;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="2" target="5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- L1 → L2: 图片创作 -->
+        <mxCell id="30" value="" style="endArrow=none;startArrow=none;html=1;strokeColor=#555555;exitX=0.18;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="3" target="10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="31" value="" style="endArrow=none;startArrow=none;html=1;strokeColor=#555555;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="3" target="11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="32" value="" style="endArrow=none;startArrow=none;html=1;strokeColor=#555555;exitX=0.82;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="3" target="12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- L1 → L2: AI 对话 -->
+        <mxCell id="33" value="" style="endArrow=none;startArrow=none;html=1;strokeColor=#555555;exitX=0.18;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="4" target="13">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="34" value="" style="endArrow=none;startArrow=none;html=1;strokeColor=#555555;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="4" target="14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="35" value="" style="endArrow=none;startArrow=none;html=1;strokeColor=#555555;exitX=0.82;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="4" target="15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- L1 → L2: 空间资产 -->
+        <mxCell id="36" value="" style="endArrow=none;startArrow=none;html=1;strokeColor=#555555;exitX=0.18;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="5" target="16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="37" value="" style="endArrow=none;startArrow=none;html=1;strokeColor=#555555;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="5" target="17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="38" value="" style="endArrow=none;startArrow=none;html=1;strokeColor=#555555;exitX=0.82;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="5" target="18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 模块间数据流（虚线箭头 + 边标签） -->
+        <mxCell id="40" value="参考图、检索命中、标签与元数据" style="endArrow=classic;html=1;strokeColor=#7F8C8D;dashed=1;fontSize=9;fontColor=#555555;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;rounded=1;" edge="1" parent="1" source="18" target="11">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="520" y="299" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="41" value="素材摘要 / 命中列表（可选上下文）" style="endArrow=classic;html=1;strokeColor=#7F8C8D;dashed=1;fontSize=9;fontColor=#555555;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;rounded=1;" edge="1" parent="1" source="18" target="15">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1058" y="240" />
+              <mxPoint x="698" y="240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="42" value="精炼描述、要素清单、Prompt 草案" style="endArrow=classic;html=1;strokeColor=#7F8C8D;dashed=1;fontSize=9;fontColor=#555555;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;rounded=1;" edge="1" parent="1" source="15" target="10">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="380" y="299" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="43" value="生成图候选入库（参数与来源 Prompt）" style="endArrow=classic;html=1;strokeColor=#7F8C8D;dashed=1;fontSize=9;fontColor=#555555;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.35;entryDx=0;entryDy=0;rounded=1;" edge="1" parent="1" source="11" target="16">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="320" />
+              <mxPoint x="720" y="292" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 说明：库内标签维护支撑检索（弱依赖，实线灰色无箭头易混，用浅色点线） -->
+        <mxCell id="44" value="标签维度" style="endArrow=classic;html=1;strokeColor=#BDC3C7;dashed=1;fontSize=8;fontColor=#95A5A6;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;rounded=1;" edge="1" parent="1" source="17" target="18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

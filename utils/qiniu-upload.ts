@@ -34,6 +34,14 @@ export function buildQiniuPublicUrl(objectKey: string): string {
  * 拉取待上传图片：跨域地址走本服务代理，同源相对路径直接请求。
  */
 async function fetchImageBlobForUpload(src: string): Promise<Blob> {
+  if (src.startsWith("data:")) {
+    const res = await fetch(src)
+    if (!res.ok) {
+      throw new Error("解析 data URL 图片失败")
+    }
+    return res.blob()
+  }
+
   if (src.startsWith("/")) {
     const origin =
       typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"

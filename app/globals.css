@@ -37,7 +37,9 @@
   --color-button-text-color-disabled: #404040;
   --color-line-color: rgba(255, 255, 255, 0.05);
 }
-
+[data-nextjs-dev-indicator] {
+  display: none !important;
+}
 .theme-only-light {
   display: inline-flex;
 }

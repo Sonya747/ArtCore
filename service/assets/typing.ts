@@ -123,5 +123,31 @@ export namespace ASSETS {
     has_more: boolean
     results: AssetRecord[]
   }
+
+  export interface TagItem {
+    id: string
+    name: string
+  }
+
+  export interface CreateTagParams {
+    name: string
+  }
+
+  export interface CreateAssetParams {
+    name: string
+    type?: string
+    description?: string
+    preview_url?: string
+    tag_ids?: string[]
+  }
+
+  export interface UpdateAssetParams {
+    asset_id: string
+    name: string
+    type?: string
+    description?: string
+    preview_url?: string
+    tag_ids?: string[]
+  }
 }
 

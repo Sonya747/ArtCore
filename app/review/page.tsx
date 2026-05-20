@@ -10,7 +10,6 @@ import {
     PlusOutlined,
     ReloadOutlined,
     SearchOutlined,
-    SendOutlined,
 } from "@ant-design/icons"
 import {
     App,
@@ -18,9 +17,7 @@ import {
     Badge,
     Button,
     Empty,
-    Form,
     Input,
-    Modal,
     Select,
     Space,
     Table,
@@ -33,6 +30,7 @@ import type { ColumnsType } from "antd/es/table"
 import dayjs from "dayjs"
 import relativeTime from "dayjs/plugin/relativeTime"
 import "dayjs/locale/zh-cn"
+import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { API } from "@/service"
 import type { Auth } from "@/service/auth/typing"
@@ -63,13 +61,9 @@ const STATUS_ICON: Record<REVIEWS.ReviewStatus, React.ReactNode> = {
     rejected: <CloseCircleOutlined />,
 }
 
-function truncate(text: string, max = 42) {
-    if (!text) return ""
-    return text.length > max ? `${text.slice(0, max)}…` : text
-}
-
 export default function ReviewPage() {
     const { message } = App.useApp()
+    const router = useRouter()
     const [me, setMe] = useState<Auth.UserInfo | null>(null)
     const [tab, setTab] = useState<REVIEWS.ReviewTab>("mine")
     const [statusFilter, setStatusFilter] = useState<
@@ -89,21 +83,6 @@ export default function ReviewPage() {
     const [detailOpen, setDetailOpen] = useState(false)
     const [detail, setDetail] = useState<REVIEWS.ReviewDetail | null>(null)
     const [detailLoading, setDetailLoading] = useState(false)
-    const [submitOpen, setSubmitOpen] = useState(false)
-    const [submitForm] = Form.useForm<{
-        task_id: string
-        reviewer_id: string
-        submitter_note?: string
-    }>()
-    const [reviewableTasks, setReviewableTasks] = useState<REVIEWS.ReviewableTask[]>([])
-    const [reviewers, setReviewers] = useState<REVIEWS.ReviewUser[]>([])
-    const [submitLoading, setSubmitLoading] = useState(false)
-    const [resubmitParent, setResubmitParent] = useState<REVIEWS.ReviewItem | null>(null)
-    const selectedTaskId = Form.useWatch("task_id", submitForm)
-    const selectedReviewableTask = useMemo(
-        () => reviewableTasks.find((t) => t.id === selectedTaskId) ?? null,
-        [reviewableTasks, selectedTaskId],
-    )
 
     useEffect(() => {
         void getMeApi().then((user) => setMe(user))
@@ -156,55 +135,6 @@ export default function ReviewPage() {
         }
     }
 
-    const openSubmitModal = async (parent?: REVIEWS.ReviewItem) => {
-        setResubmitParent(parent ?? null)
-        submitForm.resetFields()
-        try {
-            const [tasks, admins] = await Promise.all([
-                API.reviews.listReviewableTasks(),
-                API.reviews.listReviewers(),
-            ])
-            setReviewableTasks(tasks.results)
-            setReviewers(admins.results)
-
-            if (parent) {
-                submitForm.setFieldsValue({
-                    task_id: parent.task.id,
-                    reviewer_id: parent.reviewer?.id ?? admins.results[0]?.id,
-                    submitter_note: "已根据意见调整提示词，重新生成。",
-                })
-            } else if (admins.results[0]) {
-                submitForm.setFieldsValue({ reviewer_id: admins.results[0].id })
-            }
-
-            setSubmitOpen(true)
-        } catch (e) {
-            if (e instanceof Error) message.error(e.message)
-        }
-    }
-
-    const handleSubmit = async () => {
-        try {
-            const values = await submitForm.validateFields()
-            setSubmitLoading(true)
-            const res = await API.reviews.createReview({
-                task_id: values.task_id,
-                reviewer_id: values.reviewer_id,
-                submitter_note: values.submitter_note,
-                parent_request_id: resubmitParent?.id,
-            })
-            message.success(res.message)
-            setSubmitOpen(false)
-            setResubmitParent(null)
-            setTab("mine")
-            void loadList()
-        } catch (e) {
-            if (e instanceof Error) message.error(e.message)
-        } finally {
-            setSubmitLoading(false)
-        }
-    }
-
     const columns = useMemo<ColumnsType<REVIEWS.ReviewItem>>(
         () => [
             {
@@ -229,15 +159,14 @@ export default function ReviewPage() {
                 key: "task",
                 render: (_, record) => (
                     <div className="flex flex-col gap-1 min-w-0">
-                        <Tooltip title={record.task.raw_prompt}>
+                        <Tooltip title={record.submitter_note || "（无提交备注）"}>
                             <span className="max-w-[360px] truncate text-sm font-medium text-block-title-color">
-                                {record.task.raw_prompt}
+                                {record.submitter_note || "（无提交备注）"}
                             </span>
                         </Tooltip>
                         <Space size={6} wrap className="text-xs text-assistant-text-color">
                             <span className="font-mono">#{record.task.id.slice(0, 8)}</span>
-                            {record.version > 1 && <Tag color="blue">v{record.version}</Tag>}
-                            {record.task.model_name && <Tag>{record.task.model_name}</Tag>}
+                            <Tag color="blue">v{record.version}</Tag>
                         </Space>
                     </div>
                 ),
@@ -292,7 +221,7 @@ export default function ReviewPage() {
                     <Space size={0} separator={<Text type="secondary">|</Text>}>
                         <a onClick={() => openDetail(record)}>查看详情</a>
                         {tab === "mine" && record.status === "rejected" && (
-                            <a onClick={() => openSubmitModal(record)}>重新提交</a>
+                            <a onClick={() => router.push(`/review/new?resubmit=${record.id}`)}>重新提交</a>
                         )}
                     </Space>
                 ),
@@ -353,7 +282,7 @@ export default function ReviewPage() {
                 <Button
                     type="primary"
                     icon={<PlusOutlined />}
-                    onClick={() => void openSubmitModal()}
+                    onClick={() => router.push("/review/new")}
                 >
                     提交审批
                 </Button>
@@ -536,114 +465,11 @@ export default function ReviewPage() {
                 }}
                 onResubmit={() => {
                     if (!detail) return
-                    const item: REVIEWS.ReviewItem = {
-                        id: detail.id,
-                        task: detail.task,
-                        submitter: detail.submitter,
-                        reviewer: detail.reviewer,
-                        status: detail.status,
-                        submitter_note: detail.submitter_note,
-                        reviewer_note: detail.reviewer_note,
-                        parent_request_id: detail.parent_request_id,
-                        version: detail.version,
-                        created_at: detail.created_at,
-                        reviewed_at: detail.reviewed_at,
-                    }
                     setDetailOpen(false)
-                    void openSubmitModal(item)
+                    router.push(`/review/new?resubmit=${detail.id}`)
                 }}
             />
 
-            {/* 提交 / 重新提交 弹窗 */}
-            <Modal
-                title={
-                    <Space>
-                        <SendOutlined className="text-primary-color" />
-                        <span>{resubmitParent ? "重新发起审批" : "提交新审批"}</span>
-                    </Space>
-                }
-                open={submitOpen}
-                onOk={() => void handleSubmit()}
-                confirmLoading={submitLoading}
-                okText="提交"
-                onCancel={() => {
-                    setSubmitOpen(false)
-                    setResubmitParent(null)
-                }}
-                destroyOnHidden
-                width={560}
-            >
-                {resubmitParent && (
-                    <div className="mb-4 rounded-xl border border-line-color bg-default-bg-color p-3 text-xs">
-                        <div className="mb-1 flex items-center gap-2 text-assistant-text-color">
-                            <ReloadOutlined />
-                            基于已驳回申请重新发起 (v{resubmitParent.version} → v{resubmitParent.version + 1})
-                        </div>
-                        {resubmitParent.reviewer_note && (
-                            <div className="text-[#e94560]">
-                                管理员批注：{resubmitParent.reviewer_note}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <Form form={submitForm} layout="vertical" requiredMark={false}>
-                    <Form.Item
-                        name="task_id"
-                        label="选择已生成的任务"
-                        rules={[{ required: true, message: "请选择任务" }]}
-                    >
-                        <Select
-                            disabled={!!resubmitParent}
-                            showSearch
-                            optionFilterProp="label"
-                            placeholder={reviewableTasks.length ? "选择一条已成功生成的任务" : "暂无可提交的任务"}
-                            options={reviewableTasks.map((t) => ({
-                                value: t.id,
-                                label: `#${t.id.slice(0, 8)} · ${truncate(t.raw_prompt, 32)}`,
-                            }))}
-                        />
-                    </Form.Item>
-                    {selectedReviewableTask && (
-                        <div className="mb-4 rounded-xl border border-line-color bg-default-bg-color p-3">
-                            {selectedReviewableTask.image_url || selectedReviewableTask.thumbnail_url ? (
-                                <img
-                                    src={selectedReviewableTask.image_url || selectedReviewableTask.thumbnail_url || ""}
-                                    alt="任务预览图"
-                                    className="h-40 w-full rounded-lg object-contain bg-card-bg-color"
-                                />
-                            ) : (
-                                <div className="flex h-24 items-center justify-center rounded-lg text-sm text-assistant-text-color">
-                                    当前任务暂无可预览图片
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    <Form.Item
-                        name="reviewer_id"
-                        label="审核人"
-                        rules={[{ required: true, message: "请选择审核人" }]}
-                    >
-                        <Select
-                            placeholder={reviewers.length ? "选择一位管理员" : "当前没有可用的管理员"}
-                            options={reviewers.map((u) => ({
-                                value: u.id,
-                                label: `${u.name}（${u.username}）`,
-                            }))}
-                        />
-                    </Form.Item>
-
-                    <Form.Item name="submitter_note" label="提交备注（可选）">
-                        <Input.TextArea
-                            rows={3}
-                            placeholder="可说明本次提交的背景，如：用于首页 banner、已根据意见调整 xxx"
-                            maxLength={500}
-                            showCount
-                        />
-                    </Form.Item>
-                </Form>
-            </Modal>
         </div>
     )
 }

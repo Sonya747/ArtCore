@@ -36,6 +36,7 @@ export namespace TASKS {
     status: GenerationTaskStatus
     image_size?: string | null
     image_url?: string | null
+    image_urls?: string[]
     request_params?: Record<string, unknown> | null
     error_message?: string | null
   }

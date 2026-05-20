@@ -174,22 +174,22 @@ const AlbumGallery = ({ onAlbumSelect }: AlbumGalleryProps) => {
     <div className='flex flex-col h-62 shrink-0 bg-card-bg-color shadow-sm rounded-lg mb-6'>
       <div className='flex items-center justify-between pt-4 pb-2 px-6'>
         <div className='flex items-center'>
-          <h2 className='text-sm font-medium text-block-title-color mr-4'>专辑</h2>
+          <h2 className='text-sm font-medium text-block-title-color mr-4'>标签</h2>
           <Search
-            placeholder='输入名称搜索专辑'
+            placeholder='输入名称搜索标签'
             className='w-66!'
             onSearch={handleSearch}
             allowClear
           />
         </div>
-        <Button
+        {/* <Button
           type='link'
           size='small'
           icon={<IconFont type='icon-plus' />}
           onClick={handleCreateAlbum}
         >
-          新建专辑
-        </Button>
+          新建标签
+        </Button> */}
       </div>
 
       <div

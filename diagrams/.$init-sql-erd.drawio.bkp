@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" version="26.0.11">
+  <diagram id="init-sql-erd" name="ERD">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="2" value="users&#xa;PK id UUID&#xa;username (UNIQUE)&#xa;password_hash&#xa;display_name&#xa;role&#xa;created_at" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="260" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="assets&#xa;PK id UUID&#xa;name&#xa;type&#xa;description&#xa;preview_url&#xa;FK created_by -&gt; users.id&#xa;created_at" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="420" y="80" width="300" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="tags&#xa;PK id UUID&#xa;name (UNIQUE)" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="800" y="80" width="220" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="asset_tag_mapping&#xa;PK (asset_id, tag_id)&#xa;FK asset_id -&gt; assets.id&#xa;FK tag_id -&gt; tags.id" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="780" y="270" width="280" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="6" value="generation_tasks&#xa;PK id UUID&#xa;FK user_id -&gt; users.id&#xa;raw_prompt&#xa;final_prompt&#xa;model_name&#xa;status&#xa;image_size&#xa;image_url&#xa;request_params&#xa;error_message&#xa;created_at&#xa;finished_at" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="80" y="360" width="320" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="7" value="prompt_records&#xa;PK id UUID&#xa;FK task_id -&gt; generation_tasks.id&#xa;stage&#xa;prompt_text&#xa;structured_result&#xa;model_name&#xa;created_at" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="460" y="380" width="300" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="8" value="task_asset_references&#xa;PK id UUID&#xa;FK task_id -&gt; generation_tasks.id&#xa;FK asset_id -&gt; assets.id&#xa;reference_type&#xa;match_method&#xa;reference_order" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="800" y="450" width="340" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="9" value="approval_requests&#xa;PK id UUID&#xa;FK task_id -&gt; generation_tasks.id&#xa;FK submitter_id -&gt; users.id&#xa;FK reviewer_id -&gt; users.id&#xa;FK parent_request_id -&gt; approval_requests.id&#xa;status&#xa;submitter_note&#xa;reviewer_note&#xa;version&#xa;created_at&#xa;reviewed_at" style="rounded=1;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="280" width="370" height="290" as="geometry" />
+        </mxCell>
+
+        <mxCell id="20" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="3" target="2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="21" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=1;exitX=0.3;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="6" target="2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="22" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=1;exitX=0;exitY=0.4;entryX=1;entryY=0.4;" edge="1" parent="1" source="7" target="6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="23" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=1;exitX=0;exitY=0.5;entryX=1;entryY=0.6;" edge="1" parent="1" source="8" target="6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="24" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=1;exitX=0;exitY=0.2;entryX=1;entryY=0.8;" edge="1" parent="1" source="8" target="3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="25" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=1;exitX=0;exitY=0.3;entryX=1;entryY=0.7;" edge="1" parent="1" source="9" target="6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="26" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=1;exitX=0;exitY=0.1;entryX=1;entryY=0.2;" edge="1" parent="1" source="9" target="2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1120" y="200" />
+              <mxPoint x="380" y="200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="27" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=1;exitX=0;exitY=0.2;entryX=1;entryY=0.3;" edge="1" parent="1" source="9" target="2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1100" y="240" />
+              <mxPoint x="360" y="240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="28" value="self 1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=1;exitX=1;exitY=0.6;entryX=1;entryY=0.9;" edge="1" parent="1" source="9" target="9">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1660" y="520" />
+              <mxPoint x="1660" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="29" value="N : 1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=1;exitX=0;exitY=0.2;entryX=1;entryY=0.9;" edge="1" parent="1" source="5" target="3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="30" value="N : 1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=1;exitX=0.2;exitY=0;entryX=0.8;entryY=1;" edge="1" parent="1" source="5" target="4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

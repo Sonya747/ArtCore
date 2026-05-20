@@ -9,6 +9,7 @@ import { useAlbumStore } from '@/store/album'
 import { useWorkGalleryOperations } from '../../hooks/use-work-gallery-operations'
 import { assetRecordToWorkDisplay } from '../../utils/assets-operations'
 import { AddToAlbumModal } from '../album-area/album-modal'
+import { AddAssetModal } from './add-asset-modal'
 import WorkDisplay, { formatAssetCatalogTypeLabel, type WorkDisplayData } from './work-display'
 import WorkGalleryHeader from './work-gallery-header'
 import WorkGalleryTabs from './work-gallery-tabs'
@@ -29,6 +30,9 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
   const [assetDetailItem, setAssetDetailItem] = useState<WorkDisplayData | null>(null)
   const [assetDetailTags, setAssetDetailTags] = useState<string[]>([])
   const [assetDetailLoading, setAssetDetailLoading] = useState(false)
+  const [openAddAssetModal, setOpenAddAssetModal] = useState<boolean>(false)
+  const [editingItem, setEditingItem] = useState<WorkDisplayData | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
   const { modal, message } = App.useApp()
 
   // 操作相关逻辑
@@ -170,8 +174,8 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
 
   //TODO 这里的逻辑要捋一下
   const paginationDeps = useMemo(
-    () => [albumId, taskType, keyword],
-    [albumId, taskType, keyword]
+    () => [albumId, taskType, keyword, refreshKey],
+    [albumId, taskType, keyword, refreshKey]
   )
 
   const { data, loading } = useScrollPagination({
@@ -214,74 +218,22 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
   }
 
   const getActionItems = (asset: WorkDisplayData): MenuProps['items'] => {
-    if (asset.status !== TaskStatus.FINISHED) {
-      return [
-        {
-          key: 'delete',
-          label: '删除',
-          onClick: () => {
-            setOperatingItem(asset)
-            handleOpenDeleteConfirmModal(asset)
-          },
-        },
-      ]
-    }
-    if (!albumId) {
-      return [
-        {
-          key: 'download',
-          label: '下载',
-          onClick: () => {
-            handleSingleDownload(asset)
-          },
-        },
-        {
-          key: 'add-to-album',
-          label: '添加到专辑',
-          onClick: async () => {
-            setOperatingItem(asset)
-            // 查询资产对应的专辑ID列表
-            if (asset.assetIds?.[0]) {
-              try {
-                const albumIds = await API.assets.getAssetAlbumIds({
-                  asset_id: asset.assetIds[0],
-                })
-                setExistAlbumIds(albumIds)
-              } catch (error) {
-                console.error('查询资产专辑ID失败:', error)
-                // 查询失败时，设置为空数组，不影响弹窗打开
-                setExistAlbumIds([])
-              }
-            } else {
-              setExistAlbumIds([])
-            }
-            setOpenAddToAlbumModal(true)
-          },
-        },
-        {
-          key: 'delete',
-          label: '删除',
-          onClick: () => {
-            setOperatingItem(asset)
-            handleOpenDeleteConfirmModal(asset)
-          },
-        },
-      ]
-    }
     return [
       {
-        key: 'download',
-        label: '下载',
+        key: 'edit',
+        label: '编辑',
         onClick: () => {
-          handleSingleDownload(asset)
+          setEditingItem(asset)
+          setOpenAddAssetModal(true)
         },
       },
       {
-        key: 'remove-from-album',
-        label: '移除',
+        key: 'delete',
+        label: '删除',
+        danger: true,
         onClick: () => {
           setOperatingItem(asset)
-          handleOpenRemoveConfirmModal(asset)
+          handleOpenDeleteConfirmModal(asset)
         },
       },
     ]
@@ -315,7 +267,7 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
         ref={containerRef}
         className='flex flex-col flex-1 min-w-0 rounded-lg bg-card-bg-color shadow-sm '
       >
-        <div className='sticky top-0 z-20 bg-card-bg-color px-6 pt-4 rounded-lg'>
+        <div className='sticky top-0 z-20 bg-card-bg-color px-6 py-4 rounded-lg'>
           <WorkGalleryHeader
             onSearch={setKeyword}
             groupByTask={groupByTask}
@@ -343,8 +295,12 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
             canModify={canBatchModify}
             onBatchRemoveFromAlbum={handleOpenRemoveConfirmModal}
             albumId={albumId}
+            onAddAsset={() => {
+              setEditingItem(null)
+              setOpenAddAssetModal(true)
+            }}
           />
-          <WorkGalleryTabs taskType={taskType} onTaskTypeChange={handleTabChange} />
+          {/* <WorkGalleryTabs taskType={taskType} onTaskTypeChange={handleTabChange} /> */}
         </div>
         {/* 首次加载时显示全屏 loading */}
         {loading && !displayItems?.length ? (
@@ -471,6 +427,26 @@ const WorkGallery = ({ albumId, containerRef }: WorkGalleryProps) => {
           </div>
         ) : null}
       </Modal>
+      <AddAssetModal
+        open={openAddAssetModal}
+        mode={editingItem ? 'edit' : 'create'}
+        assetId={editingItem?.assetIds?.[0]}
+        initialValues={
+          editingItem
+            ? {
+                name: editingItem.title,
+                type: editingItem.assetCatalogType,
+                description: editingItem.assetDescription,
+                preview_url: editingItem.url,
+              }
+            : undefined
+        }
+        onCancel={() => {
+          setOpenAddAssetModal(false)
+          setEditingItem(null)
+        }}
+        onSuccess={() => setRefreshKey((k) => k + 1)}
+      />
     </>
   )
 }

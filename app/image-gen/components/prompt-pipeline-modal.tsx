@@ -2,6 +2,7 @@
 
 import { CheckOutlined, CloseOutlined, LoadingOutlined } from "@ant-design/icons"
 import { Modal } from "antd"
+import { useEffect, useMemo, useState } from "react"
 import GradientButton from "@/components/gradient-button"
 import IconFont from "@/components/icon-font"
 import type { DoubaoImageGen, PromptEngineering } from "@/service/image-gen"
@@ -16,6 +17,7 @@ export interface PipelineState {
   userPrompt: string
   semantic: PromptEngineering.SemanticParseResult | null
   assets: PromptEngineering.AssetRetrievalResult | null
+  selectedMatchedAssets: PromptEngineering.AssetReference[]
   synthesis: PromptEngineering.PromptSynthesisResult | null
   editedPrompt: string
   pendingPayload: DoubaoImageGen.GenerationsRequest | null
@@ -29,6 +31,7 @@ export const INITIAL_PIPELINE: PipelineState = {
   userPrompt: "",
   semantic: null,
   assets: null,
+  selectedMatchedAssets: [],
   synthesis: null,
   editedPrompt: "",
   pendingPayload: null,
@@ -107,37 +110,6 @@ function renderStepResult(
     )
   }
 
-  if (stepKey === "assets" && pipeline.assets) {
-    const matched = (["subject", "equipment", "scene", "style"] as const)
-      .map((key) => pipeline.assets?.[key])
-      .filter((asset): asset is PromptEngineering.AssetReference => !!asset?.matched)
-
-    return (
-      <div className="mt-1.5 max-h-[300px] overflow-y-auto rounded-lg bg-default-bg-color py-2">
-        {matched.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {matched.map((asset, index) => (
-              <span
-                key={index}
-                className="inline-flex w-[400px] flex-1 items-center gap-1.5 rounded-2xl bg-[#f0fdf4] py-0.5 text-xs text-[#15803d] dark:bg-[#052e16] dark:text-[#4ade80]"
-              >
-                {asset.image_url && (
-                  <img src={asset.image_url} alt={asset.keyword} className="h-30 w-30 rounded-2xl" />
-                )}
-                {asset.keyword}
-                {asset.description && (
-                  <span className="text-assistant-text-color">{asset.description}</span>
-                )}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <span className="text-sm text-assistant-text-color">未匹配到关联资产</span>
-        )}
-      </div>
-    )
-  }
-
   if (stepKey === "synthesis" && pipeline.synthesis) {
     return (
       <div className="mt-2 rounded-xl border border-line-color bg-default-bg-color p-4">
@@ -158,6 +130,129 @@ function renderStepResult(
   return null
 }
 
+function getAssetSelectionKey(asset: PromptEngineering.AssetReference) {
+  return asset.id ?? asset.keyword
+}
+
+function MatchedAssetsStep({
+  assets,
+  value,
+  onChange,
+}: {
+  assets: PromptEngineering.AssetRetrievalResult
+  value: PromptEngineering.AssetReference[]
+  onChange: (next: PromptEngineering.AssetReference[]) => void
+}) {
+  const matched = useMemo(
+    () =>
+      (["subject", "equipment", "scene", "style"] as const)
+        .map((key) => assets?.[key])
+        .filter((asset): asset is PromptEngineering.AssetReference => !!asset?.matched),
+    [assets],
+  )
+
+  const selectedKeys = useMemo(() => new Set(value.map(getAssetSelectionKey)), [value])
+
+  useEffect(() => {
+    // 默认全选：当 assets 发生变化时，把已匹配资产全部选中（同时保持“仍然存在的选择”不会丢失）。
+    const nextAllKeys = new Set(matched.map(getAssetSelectionKey))
+    const keep = matched.filter((a) => selectedKeys.has(getAssetSelectionKey(a)))
+    if (keep.length === matched.length && value.length === keep.length) return
+
+    // 如果当前 value 为空（首次打开/首次匹配），直接全选
+    if (value.length === 0) {
+      onChange(matched)
+      return
+    }
+
+    // 否则：优先保留已有选择，避免用户勾选后被覆盖；但若已选择项已不在 matched 中，则移除
+    const keepKeys = new Set(keep.map(getAssetSelectionKey))
+    const hasUnknown = value.some((a) => !nextAllKeys.has(getAssetSelectionKey(a)))
+    if (hasUnknown) {
+      onChange(matched.filter((a) => keepKeys.has(getAssetSelectionKey(a))))
+    }
+  }, [matched, onChange, selectedKeys, value])
+
+  const toggle = (asset: PromptEngineering.AssetReference) => {
+    const key = getAssetSelectionKey(asset)
+    if (selectedKeys.has(key)) {
+      onChange(value.filter((a) => getAssetSelectionKey(a) !== key))
+    } else {
+      onChange([...value, asset])
+    }
+  }
+
+  return (
+    <div className="mt-1.5 max-h-[300px] overflow-y-auto rounded-lg bg-default-bg-color p-2">
+      {matched.length > 0 ? (
+        <>
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+            <span className="text-xs text-assistant-text-color">
+              已选择 <span className="font-medium text-block-title-color">{value.length}</span> /{" "}
+              {matched.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="rounded-md border border-line-color bg-card-bg-color px-2 py-1 text-xs text-assistant-text-color hover:bg-default-bg-color"
+                onClick={() => onChange(matched)}
+              >
+                全选
+              </button>
+              <button
+                type="button"
+                className="rounded-md border border-line-color bg-card-bg-color px-2 py-1 text-xs text-assistant-text-color hover:bg-default-bg-color"
+                onClick={() => onChange([])}
+              >
+                全不选
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {matched.map((asset) => {
+              const key = getAssetSelectionKey(asset)
+              const checked = selectedKeys.has(key)
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => toggle(asset)}
+                  className={cn(
+                    "inline-flex w-[400px] flex-1 items-center gap-2 rounded-2xl border px-2 py-1 text-left text-xs transition-colors",
+                    checked
+                      ? "border-[#22c55e] bg-[#f0fdf4] text-[#15803d] dark:border-[#4ade80] dark:bg-[#052e16] dark:text-[#4ade80]"
+                      : "border-line-color bg-card-bg-color text-assistant-text-color hover:bg-default-bg-color",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-4 w-4 items-center justify-center rounded-sm border text-[10px]",
+                      checked ? "border-[#22c55e] bg-[#22c55e] text-white" : "border-line-color",
+                    )}
+                  >
+                    {checked ? <CheckOutlined /> : null}
+                  </span>
+
+                  {asset.image_url && (
+                    <img src={asset.image_url} alt={asset.keyword} className="h-10 w-10 rounded-xl" />
+                  )}
+                  <span className="text-block-title-color">{asset.keyword}</span>
+                  {asset.description && (
+                    <span className="text-assistant-text-color">{asset.description}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      ) : (
+        <span className="px-1 text-sm text-assistant-text-color">未匹配到关联资产</span>
+      )}
+    </div>
+  )
+}
+
 export default function PromptPipelineModal({
   pipeline,
   isLoading,
@@ -165,6 +260,12 @@ export default function PromptPipelineModal({
   onConfirmGenerate,
   onEditedPromptChange,
 }: PromptPipelineModalProps) {
+  const handleMatchedAssetsChange = (next: PromptEngineering.AssetReference[]) => {
+    // 这里不直接 setPipeline（状态在父组件），但至少保证选择结果能被外部拿到：
+    // 父组件如果需要利用该值进行合成/生成，可以在 PipelineState 中读取。
+    pipeline.selectedMatchedAssets = next
+  }
+
   return (
     <Modal
       open={pipeline.open}
@@ -248,7 +349,14 @@ export default function PromptPipelineModal({
                       <span className="text-xs text-assistant-text-color">{step.desc}</span>
                     )}
                   </div>
-                  {status === "done" && renderStepResult(step.key, pipeline, onEditedPromptChange)}
+                  {status === "done" && step.key !== "assets" && renderStepResult(step.key, pipeline, onEditedPromptChange)}
+                  {status === "done" && step.key === "assets" && pipeline.assets && (
+                    <MatchedAssetsStep
+                      assets={pipeline.assets}
+                      value={pipeline.selectedMatchedAssets}
+                      onChange={handleMatchedAssetsChange}
+                    />
+                  )}
                   {status === "error" && pipeline.error && (
                     <div className="mt-1 rounded-lg bg-[#fef2f2] px-3 py-2 text-sm text-[#ef4444] dark:bg-[#450a0a]">
                       {pipeline.error}

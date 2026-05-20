@@ -65,11 +65,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '名称不能为空' }, { status: 400 })
     }
     const prisma = getAssetsPrisma()
+    const id = randomUUID()
     await prisma.$executeRaw`
       INSERT INTO tags (id, name)
-      VALUES (${randomUUID()}::uuid, ${name})
+      VALUES (${id}::uuid, ${name})
     `
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, id, name })
   } catch (error) {
     console.error('[asset-management/tags][POST]', error)
     return NextResponse.json({ error: '创建标签失败' }, { status: 500 })

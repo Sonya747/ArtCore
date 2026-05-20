@@ -21,6 +21,7 @@ import {
 } from "@/service/image-gen"
 import type { PromptEngineering, DoubaoImageGen } from "@/service/image-gen"
 import { tasksService } from "@/service/tasks"
+import type { TASKS } from "@/service/tasks/typing"
 import { ls } from "@/utils/localStorage"
 import { uploadRemoteImageUrlsToQiniu } from "@/utils/qiniu-upload"
 import { normalizeImageToBase64DataUrl } from "@/utils/download"
@@ -54,6 +55,7 @@ type DoubaoImageGenResult = {
 type ImageGenResult = LegacyImageGenResult | DoubaoImageGenResult
 
 const DOUBAO_MODEL = "doubao-seedream-5-0-260128"
+const BASE64_IMAGE_DATA_URL_RE = /^data:image\/[a-zA-Z0-9.+-]+;base64,/
 
 const DOUBAO_SEQUENTIAL_OPTIONS = [
   { label: "关闭连续出图", value: "disabled" },
@@ -91,6 +93,37 @@ const MODEL_OPTIONS = [
 
 const LAST_MODEL_KEY = "image_gen_last_model"
 
+function pickStringField(data: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    const value = data[key]
+    if (typeof value === "string" && value.trim()) {
+      return value.trim()
+    }
+  }
+  return ""
+}
+
+function normalizeDoubaoImageItem(item: Record<string, unknown>): { url: string; size: string } | null {
+  const url = pickStringField(item, ["url", "image_url", "imageUrl", "data_url", "dataUrl"])
+  const b64Json = pickStringField(item, ["b64_json", "b64Json"])
+  const src =
+    url ||
+    (b64Json
+      ? BASE64_IMAGE_DATA_URL_RE.test(b64Json)
+        ? b64Json
+        : `data:image/png;base64,${b64Json}`
+      : "")
+
+  if (!src) {
+    return null
+  }
+
+  return {
+    url: src,
+    size: typeof item.size === "string" ? item.size : "—",
+  }
+}
+
 
 /**
  * 获取上次使用的模型
@@ -109,22 +142,24 @@ function parseImageGenResponse(
   model: string,
 ): ImageGenResult | null {
   const data = raw?.data
-  if (
-    Array.isArray(data) &&
-    data.length > 0 &&
-    typeof data[0] === "object" &&
-    data[0] !== null &&
-    "url" in data[0] &&
-    typeof (data[0] as { url: unknown }).url === "string"
-  ) {
+  if (Array.isArray(data) && data.length > 0) {
+    const items = data
+      .map((item) =>
+        item && typeof item === "object"
+          ? normalizeDoubaoImageItem(item as Record<string, unknown>)
+          : null,
+      )
+      .filter((item): item is { url: string; size: string } => Boolean(item))
+
+    if (items.length === 0) {
+      return null
+    }
+
     return {
       kind: "doubao",
       model: typeof raw.model === "string" ? raw.model : model,
       created: typeof raw.created === "number" ? raw.created : Math.floor(Date.now() / 1000),
-      items: data.map((item: { url: string; size?: string }) => ({
-        url: item.url,
-        size: typeof item.size === "string" ? item.size : "—",
-      })),
+      items,
       usage:
         raw.usage && typeof raw.usage === "object"
           ? (raw.usage as DoubaoImageGenResult["usage"])
@@ -183,12 +218,11 @@ export default function Page() {
     }
   }, [form])
 
-  const isDoubaoModel = model === DOUBAO_MODEL //TODO之后改成映射
+  const isDoubaoModel = model === DOUBAO_MODEL 
 
   const [pipeline, setPipeline] = useState<PipelineState>(INITIAL_PIPELINE)
   const pipelineAbortRef = useRef(false)
 
-  //TODO 返回图片url
   const runOssUpload = useCallback(
     async (urls: string[]) => {
       if (urls.length === 0) {
@@ -214,6 +248,19 @@ export default function Page() {
     setOssUpload({ status: "uploading" })
     void runOssUpload(getResultImageUrls(result))
   }, [result, runOssUpload])
+
+  const persistGenerationTask = useCallback(
+    async (params: TASKS.CreateGenerationTaskParams) => {
+      try {
+        await tasksService.createGenerationTask(params)
+      } catch (err) {
+        console.error("[generation task persist]", err)
+        const msg = err instanceof Error ? err.message : "记录生成任务失败"
+        message.warning(msg)
+      }
+    },
+    [message],
+  )
 
   const handleOptimize = () => {
     form
@@ -311,7 +358,7 @@ export default function Page() {
           setPipeline((prev) => ({ ...prev, stage: "error", error: errMsg }))
 
           //优化失败，创建生成任务
-          void tasksService.createGenerationTask({
+          await persistGenerationTask({
             raw_prompt: values.prompt,
             model_name: values.model,
             status: "failed",
@@ -342,6 +389,15 @@ export default function Page() {
     const apiKey = process.env.NEXT_PUBLIC_ARK_API_KEY
     if (!apiKey) {
       message.error("未配置环境变量 NEXT_PUBLIC_ARK_API_KEY")
+      await persistGenerationTask({
+        raw_prompt: pipeline.userPrompt,
+        final_prompt: pipeline.editedPrompt || (pipeline.pendingPayload?.prompt ?? null),
+        model_name: pipeline.formValues?.model ?? null,
+        status: "failed",
+        image_size: pipeline.pendingPayload?.size ?? null,
+        request_params: pipeline.pendingPayload as unknown as Record<string, unknown> | null,
+        error_message: "未配置环境变量 NEXT_PUBLIC_ARK_API_KEY",
+      })
       setIsLoading(false)
       return
     }
@@ -367,12 +423,33 @@ export default function Page() {
         } else {
           setOssUpload({ status: "idle" })
         }
+
+        await persistGenerationTask({
+          raw_prompt: pipeline.userPrompt,
+          final_prompt: finalPayload.prompt,
+          model_name: pipeline.formValues.model,
+          status: "success",
+          image_size: finalPayload.size ?? null,
+          image_url: sourceUrls[0] ?? null,
+          image_urls: sourceUrls,
+          request_params: finalPayload as unknown as Record<string, unknown>,
+        })
       } else {
-        message.warning("返回数据格式无法展示为图片结果，请确认接口已按文档返回 data[].url")
+        message.warning("返回数据格式无法展示为图片结果，请确认接口已返回 data[].url 或 data[].b64_json")
+        await persistGenerationTask({
+          raw_prompt: pipeline.userPrompt,
+          final_prompt: finalPayload.prompt,
+          model_name: pipeline.formValues.model,
+          status: "failed",
+          image_size: finalPayload.size ?? null,
+          request_params: finalPayload as unknown as Record<string, unknown>,
+          error_message: "返回数据格式无法展示为图片结果（缺少可用的 data[].url / b64_json）",
+        })
       }
 
       setPipeline(INITIAL_PIPELINE)
     } catch (e) {
+      const errMsg = e instanceof Error ? e.message : "生成图片任务失败"
       if (axios.isAxiosError(e)) {
         const detail =
           e.response?.data !== undefined
@@ -382,12 +459,22 @@ export default function Page() {
             : e.message
         message.error(detail || "生成图片任务失败")
       } else {
-        message.error(e instanceof Error ? e.message : "生成图片任务失败")
+        message.error(errMsg)
       }
+
+      await persistGenerationTask({
+        raw_prompt: pipeline.userPrompt,
+        final_prompt: pipeline.editedPrompt || pipeline.pendingPayload?.prompt,
+        model_name: pipeline.formValues?.model,
+        status: "failed",
+        image_size: pipeline.pendingPayload?.size ?? null,
+        request_params: pipeline.pendingPayload as unknown as Record<string, unknown> | null,
+        error_message: errMsg,
+      })
     } finally {
       setIsLoading(false)
     }
-  }, [pipeline, message, runOssUpload])
+  }, [pipeline, message, runOssUpload, persistGenerationTask])
 
   const { run: handleOptimizeDebounce } = useDebounceFn(handleOptimize, {
     wait: 350,
@@ -579,7 +666,7 @@ export default function Page() {
                     <div className="mt-6 grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
                       {result.items.map((item, idx) => (
                         <div
-                          key={`${item.url}-${idx}`}
+                          key={`${idx}-${item.size}`}
                           className="overflow-hidden rounded-xl border border-line-color bg-default-bg-color"
                         >
                           <div className="aspect-4/3 w-full overflow-hidden">

@@ -55,18 +55,34 @@ export async function POST(req: Request) {
     const body = await req.json()
 
     const isFinal = body.status === 'failed' || body.status === 'success'
-    const task = await prisma.generationTask.create({
-      data: {
-        raw_prompt: body.raw_prompt,
-        final_prompt: body.final_prompt ?? null,
-        model_name: body.model_name ?? null,
-        status: body.status ?? 'pending',
-        image_size: body.image_size ?? null,
-        image_url: body.image_url ?? null,
-        request_params: body.request_params ?? null,
-        error_message: body.error_message ?? null,
-        finished_at: isFinal ? new Date() : null,
-      },
+    const imageUrls: string[] = Array.isArray(body.image_urls) ? body.image_urls.filter((u: unknown) => typeof u === 'string' && u) : []
+
+    const task = await prisma.$transaction(async (tx) => {
+      const created = await tx.generationTask.create({
+        data: {
+          raw_prompt: body.raw_prompt,
+          final_prompt: body.final_prompt ?? null,
+          model_name: body.model_name ?? null,
+          status: body.status ?? 'pending',
+          image_size: body.image_size ?? null,
+          image_url: body.image_url ?? imageUrls[0] ?? null,
+          request_params: body.request_params ?? null,
+          error_message: body.error_message ?? null,
+          finished_at: isFinal ? new Date() : null,
+        },
+      })
+
+      if (imageUrls.length > 0) {
+        await tx.generatedImage.createMany({
+          data: imageUrls.map((url: string, idx: number) => ({
+            task_id: created.id,
+            image_url: url,
+            sort_order: idx,
+          })),
+        })
+      }
+
+      return created
     })
 
     return NextResponse.json({ id: task.id }, { status: 201 })

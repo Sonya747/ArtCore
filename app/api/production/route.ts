@@ -25,6 +25,7 @@ export async function GET() {
 
     const results = rows.map((task) => ({
       id: task.id,
+      user_id: task.user_id,
       prompt: task.final_prompt || task.raw_prompt,
       created_at: task.created_at.toISOString(),
       images: task.generated_images.map((img) => img.image_url),

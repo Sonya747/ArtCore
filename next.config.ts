@@ -10,7 +10,8 @@ const nextConfig: NextConfig = {
         as: "*.js",
       },
     },
-  }
+  },
+  devIndicators: false,
 }
 
 export default nextConfig

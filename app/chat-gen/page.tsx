@@ -78,7 +78,7 @@ async function fetchChatCompletion(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      messages: [{ role: "system", content: "你是一个游戏美术领域的AI助手" }, ...messages],
+      messages: [{ role: "system", content: "你是一个游戏美术领域的AI助手，协助角色、场景与风格设定，你的回答简洁明了，并在最后附上对应的生图提示词。" }, ...messages],
       stream: false,
       model: "doubao-seed-2-0-lite-260215",
     }),

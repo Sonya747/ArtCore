@@ -18,6 +18,7 @@ export interface WorkGalleryHeaderProps {
   canDownload: boolean
   canModify: boolean
   onBatchRemoveFromAlbum: () => void
+  onAddAsset?: () => void
 }
 
 /**
@@ -38,6 +39,7 @@ const WorkGalleryHeader = ({
   onBatchDelete,
   onBatchModify,
   onBatchRemoveFromAlbum,
+  onAddAsset,
 }: WorkGalleryHeaderProps) => {
   return (
     <div>
@@ -52,9 +54,14 @@ const WorkGalleryHeader = ({
             <Switch checked={groupByTask} onChange={onGroupByTaskChange} />
           </div>
           {!selecting && (
-            <GradientButton type='primary' gradient='secondary' onClick={onBatchOperationClick}>
-              批量操作
-            </GradientButton>
+            <>
+              <GradientButton type='primary' gradient='primary' onClick={onAddAsset}>
+                添加资产
+              </GradientButton>
+              <GradientButton type='primary' gradient='secondary' onClick={onBatchOperationClick}>
+                批量操作
+              </GradientButton>
+            </>
           )}
           {selecting && (
             <GradientButton type='primary' gradient='secondary' onClick={onCancelSelect}>

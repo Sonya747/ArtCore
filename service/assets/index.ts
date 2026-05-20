@@ -125,5 +125,37 @@ export const assetsService = {
     }
     return data as ASSETS.FetchAssetsResponse
   },
+
+  async getAllTags(): Promise<ASSETS.TagItem[]> {
+    return requestJson<ASSETS.TagItem[]>('/api/asset-management/tags/all')
+  },
+
+  async createTag(params: ASSETS.CreateTagParams): Promise<ASSETS.TagItem> {
+    const data = await requestJson<{ ok: boolean; id: string; name: string }>(
+      '/api/asset-management/tags',
+      {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+      }
+    )
+    return { id: data.id, name: data.name }
+  },
+
+  async createAsset(params: ASSETS.CreateAssetParams): Promise<{ ok: boolean; asset_id: string }> {
+    return requestJson<{ ok: boolean; asset_id: string }>('/api/asset-management/assets/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    })
+  },
+
+  async updateAsset(params: ASSETS.UpdateAssetParams): Promise<{ ok: boolean; asset_id: string }> {
+    return requestJson<{ ok: boolean; asset_id: string }>('/api/asset-management/assets/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    })
+  },
 }
 

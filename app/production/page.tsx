@@ -64,11 +64,13 @@ export default function ProductionPage() {
                   hoverable
                   cover={
                     cover ? (
-                      <img
-                        src={cover}
-                        alt="作品图片"
-                        className="h-[220px] w-full object-cover"
-                      />
+                      <div className="flex h-[220px] w-full items-center justify-center bg-default-bg-color">
+                        <img
+                          src={cover}
+                          alt="作品图片"
+                          className="max-h-full max-w-full object-contain mx-auto"
+                        />
+                      </div>
                     ) : (
                       <div className="flex h-[220px] items-center justify-center bg-default-bg-color text-assistant-text-color">
                         无图片
